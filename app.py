@@ -320,37 +320,66 @@ def websocket_stream(ws):
 
 def stream_stock_data(ws, symbols):
     """
-    Stream stock data using yfinance AsyncWebSocket (from test.py)
+    Stream stock data by polling yfinance at regular intervals
     """
-    async def async_stream():
-        try:
-            async with yf.AsyncWebSocket() as yf_ws:
-                await yf_ws.subscribe(symbols)
-                
-                async for message in yf_ws.stream():
-                    try:
-                        ws.send(json.dumps({
-                            'type': 'data',
-                            'data': message
-                        }))
-                    except Exception as e:
-                        print(f"Error sending message: {e}")
-                        break
-        
-        except Exception as e:
-            try:
-                ws.send(json.dumps({
-                    'type': 'error',
-                    'message': str(e)
-                }))
-            except:
-                pass
+    import time
     
-    # Run async function
     try:
-        asyncio.run(async_stream())
+        ws.send(json.dumps({
+            'type': 'stream_started',
+            'symbols': symbols,
+            'interval': '5 seconds'
+        }))
+        
+        while True:
+            try:
+                # Fetch current data for all symbols
+                stock_data = {}
+                
+                for symbol in symbols:
+                    try:
+                        ticker = yf.Ticker(symbol)
+                        hist = ticker.history(period='1d', interval='1m')
+                        
+                        if not hist.empty:
+                            latest = hist.iloc[-1]
+                            stock_data[symbol] = {
+                                'symbol': symbol,
+                                'price': float(latest['Close']),
+                                'open': float(latest['Open']),
+                                'high': float(latest['High']),
+                                'low': float(latest['Low']),
+                                'volume': int(latest['Volume']),
+                                'timestamp': hist.index[-1].isoformat()
+                            }
+                    except Exception as e:
+                        stock_data[symbol] = {
+                            'symbol': symbol,
+                            'error': str(e)
+                        }
+                
+                # Send data
+                ws.send(json.dumps({
+                    'type': 'data',
+                    'data': stock_data,
+                    'timestamp': datetime.now().isoformat()
+                }))
+                
+                time.sleep(5)
+            
+            except Exception as e:
+                print(f"Error in stream loop: {e}")
+                break
+    
     except Exception as e:
         print(f"Stream error: {e}")
+        try:
+            ws.send(json.dumps({
+                'type': 'error',
+                'message': str(e)
+            }))
+        except:
+            pass
 
 
 if __name__ == '__main__':
