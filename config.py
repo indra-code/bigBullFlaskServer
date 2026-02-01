@@ -64,16 +64,9 @@ class Config:
     
     # Popular Mutual Funds in India (for autocomplete)
     POPULAR_MUTUAL_FUNDS = [
-        '0P0000XVLO.BO',  # SBI Bluechip Fund
-        '0P00013IZ6.BO',  # HDFC Top 100 Fund
-        '0P0000XVH1.BO',  # ICICI Prudential Bluechip Fund
-        '0P0000XV3C.BO',  # Axis Bluechip Fund
-        '0P0000XUYT.BO',  # Mirae Asset Large Cap Fund
-        '0P00018QX7.BO',  # Parag Parikh Flexi Cap Fund
-        '0P0000XUYQ.BO',  # Kotak Standard Multicap Fund
-        '0P00013J07.BO',  # SBI Small Cap Fund
-        '0P0000XVKI.BO',  # Axis Midcap Fund
-        '0P0000XV0R.BO',  # HDFC Mid-Cap Opportunities Fund
+        'BIRLAPREC.BO',
+        '0P0000XVLO.BO'
+          # HDFC Mid-Cap Opportunities Fund
     ]
 
 config = Config()

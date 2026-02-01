@@ -14,7 +14,7 @@ from utils.news_service import NewsService
 from utils.risk_analyzer import RiskAnalyzer
 from utils.ml_predictor import MLPredictor, SimpleMovingAveragePredictor
 from utils.insights_generator import InsightsGenerator
-
+from utils.portfolio_service import PortfolioService
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -759,6 +759,56 @@ def get_popular_assets(category):
         return jsonify({'error': str(e)}), 500
 
 
+
+
+portfolio_manager = PortfolioService()
+
+# ============================================================================
+# PORTFOLIO TRANSACTIONS
+# ============================================================================
+
+@app.route('/api/portfolio/buy', methods=['POST'])
+def buy_asset():
+    """Endpoint to buy or add units to an asset"""
+    try:
+        data = request.json
+        symbol = data.get('symbol')
+        units = float(data.get('units', 0))
+        price = float(data.get('price', 0))
+        
+        if not symbol or units <= 0:
+            return jsonify({'error': 'Invalid symbol or units'}), 400
+            
+        result = portfolio_manager.buy_asset(symbol, units, price)
+        return jsonify(result), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/portfolio/sell', methods=['POST'])
+def sell_asset():
+    """Endpoint to sell assets and calculate average-cost profit"""
+    try:
+        data = request.json
+        symbol = data.get('symbol')
+        units = float(data.get('units', 0))
+        
+        # Automatically fetch the current market price for the sale
+        market_data = data_fetcher.get_current_price(symbol)
+        if not market_data:
+            return jsonify({'error': 'Could not verify market price for sale'}), 404
+            
+        current_price = market_data['price']
+        result = portfolio_manager.sell_asset(symbol, units, current_price)
+        return jsonify(result), 200
+    except ValueError as ve:
+        return jsonify({'error': str(ve)}), 400
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/portfolio/holdings', methods=['GET'])
+def get_holdings():
+    """Get current portfolio state"""
+    return jsonify(portfolio_manager.get_portfolio()), 200
 # ============================================================================
 # ERROR HANDLERS
 # ============================================================================
