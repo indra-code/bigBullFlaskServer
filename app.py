@@ -2,181 +2,580 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from flask_sock import Sock
 import yfinance as yf
-import asyncio
 import json
 from datetime import datetime
 import threading
+import logging
 
+# Import custom modules
+from config import config
+from utils.data_fetcher import DataFetcher
+from utils.news_service import NewsService
+from utils.risk_analyzer import RiskAnalyzer
+from utils.ml_predictor import MLPredictor, SimpleMovingAveragePredictor
+from utils.insights_generator import InsightsGenerator
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Initialize Flask app
 app = Flask(__name__)
 CORS(app)
 sock = Sock(app)
 
-# Period and interval mappings
-PERIOD_INTERVAL_MAP = {
-    '1D': {'period': '1d', 'interval': '1m'},
-    '5D': {'period': '5d', 'interval': '5m'},
-    '1M': {'period': '1mo', 'interval': '30m'},
-    '3M': {'period': '3mo', 'interval': '1d'},
-    '6M': {'period': '6mo', 'interval': '1d'},
-    '1Y': {'period': '1y', 'interval': '1d'},
-    '5Y': {'period': '5y', 'interval': '1wk'},
-    'MAX': {'period': 'max', 'interval': '1mo'}
-}
+# Initialize services
+news_service = NewsService(config.FINNHUB_API_KEY)
+data_fetcher = DataFetcher()
 
 # WebSocket connections storage
 active_ws_connections = {}
 
+# ============================================================================
+# HEALTH CHECK
+# ============================================================================
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
-    return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()}), 200
+    return jsonify({
+        'status': 'healthy',
+        'timestamp': datetime.now().isoformat(),
+        'version': '1.0.0'
+    }), 200
 
 
-@app.route('/api/stock/history/<symbol>', methods=['GET'])
-def get_stock_history(symbol):
+# ============================================================================
+# SEARCH ENDPOINTS (Category-wise autocomplete)
+# ============================================================================
+
+@app.route('/api/search/<category>', methods=['GET'])
+def search_by_category(category):
     """
-    Get stock historical data (from test3.py)
+    Search assets by category with autocomplete
+    
+    Categories: stocks, crypto, mutualfunds, all
     Query params:
-    - timeframe: 1D, 5D, 1M, 3M, 6M, 1Y, 5Y, MAX (default: 1M)
-    - period: custom period (overrides timeframe)
-    - interval: custom interval (overrides timeframe)
+    - query: search query (required)
+    - max_results: maximum number of results (default: 10)
+    
+    Example: /api/search/crypto?query=bit&max_results=5
     """
     try:
-        # Get timeframe from query params
-        timeframe = request.args.get('timeframe', '1M').upper()
+        query = request.args.get('query', '')
+        if not query:
+            return jsonify({'error': 'Query parameter is required'}), 400
         
-        # Check if custom period/interval provided
+        max_results = int(request.args.get('max_results', 10))
+        
+        # Validate category
+        valid_categories = ['stocks', 'crypto', 'mutualfunds', 'all']
+        if category not in valid_categories:
+            return jsonify({
+                'error': f'Invalid category. Choose from: {", ".join(valid_categories)}'
+            }), 400
+        
+        # Search assets
+        results = data_fetcher.search_assets(query, category, max_results)
+        
+        return jsonify({
+            'category': category,
+            'query': query,
+            'count': len(results),
+            'results': results
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error in search: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# ASSET DATA ENDPOINTS
+# ============================================================================
+
+@app.route('/api/asset/<category>/<symbol>/quote', methods=['GET'])
+def get_asset_quote(category, symbol):
+    """
+    Get current quote for an asset
+    
+    Example: /api/asset/stocks/RELIANCE.NS/quote
+    """
+    try:
+        price_data = data_fetcher.get_current_price(symbol)
+        
+        if not price_data:
+            return jsonify({
+                'error': f'No data found for {symbol}'
+            }), 404
+        
+        price_data['category'] = category
+        
+        return jsonify(price_data), 200
+    
+    except Exception as e:
+        logger.error(f"Error fetching quote: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/asset/<category>/<symbol>/history', methods=['GET'])
+def get_asset_history(category, symbol):
+    """
+    Get historical data for an asset
+    
+    Query params:
+    - timeframe: 1D, 5D, 1M, 3M, 6M, 1Y, 5Y, MAX (default: 3M)
+    - period: custom period (overrides timeframe)
+    - interval: custom interval (overrides timeframe)
+    
+    Example: /api/asset/stocks/RELIANCE.NS/history?timeframe=3M
+    """
+    try:
+        timeframe = request.args.get('timeframe', '3M').upper()
         custom_period = request.args.get('period')
         custom_interval = request.args.get('interval')
         
         if custom_period and custom_interval:
             period = custom_period
             interval = custom_interval
-        elif timeframe in PERIOD_INTERVAL_MAP:
-            period = PERIOD_INTERVAL_MAP[timeframe]['period']
-            interval = PERIOD_INTERVAL_MAP[timeframe]['interval']
+        elif timeframe in config.PERIOD_INTERVAL_MAP:
+            period = config.PERIOD_INTERVAL_MAP[timeframe]['period']
+            interval = config.PERIOD_INTERVAL_MAP[timeframe]['interval']
         else:
             return jsonify({
-                'error': f'Invalid timeframe. Choose from: {", ".join(PERIOD_INTERVAL_MAP.keys())}'
+                'error': f'Invalid timeframe. Choose from: {", ".join(config.PERIOD_INTERVAL_MAP.keys())}'
             }), 400
         
-        # Get ticker data (from test3.py)
-        ticker = yf.Ticker(symbol)
-        history = ticker.history(period=period, interval=interval)
+        # Fetch historical data
+        history = data_fetcher.get_historical_data(symbol, period, interval)
         
-        # Convert DataFrame to JSON-serializable format
         if history.empty:
             return jsonify({
-                'error': f'No data found for symbol {symbol}'
+                'error': f'No data found for {symbol}'
             }), 404
         
-        # Reset index to make Date a column
+        # Convert to JSON-serializable format
         history_reset = history.reset_index()
+        data_list = history_reset.to_dict(orient='records')
         
-        # Convert to dict
-        data = {
-            'symbol': symbol,
-            'timeframe': timeframe,
-            'period': period,
-            'interval': interval,
-            'data': history_reset.to_dict(orient='records')
-        }
-        
-        # Convert Timestamp objects to strings
-        for record in data['data']:
+        # Convert timestamps
+        for record in data_list:
             if 'Date' in record or 'Datetime' in record:
                 date_key = 'Date' if 'Date' in record else 'Datetime'
                 record[date_key] = record[date_key].isoformat() if hasattr(record[date_key], 'isoformat') else str(record[date_key])
         
-        return jsonify(data), 200
-        
+        return jsonify({
+            'symbol': symbol,
+            'category': category,
+            'timeframe': timeframe,
+            'period': period,
+            'interval': interval,
+            'data': data_list
+        }), 200
+    
     except Exception as e:
+        logger.error(f"Error fetching history: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/stock/info/<symbol>', methods=['GET'])
-def get_stock_info(symbol):
-    """Get detailed stock information"""
+@app.route('/api/asset/<category>/<symbol>/info', methods=['GET'])
+def get_asset_info(category, symbol):
+    """
+    Get detailed information about an asset
+    
+    Example: /api/asset/stocks/RELIANCE.NS/info
+    """
     try:
-        ticker = yf.Ticker(symbol)
-        info = ticker.info
+        info = data_fetcher.get_asset_info(symbol)
         
         return jsonify({
             'symbol': symbol,
+            'category': category,
             'info': info
         }), 200
-        
+    
     except Exception as e:
+        logger.error(f"Error fetching info: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/search', methods=['GET'])
-def search_stocks():
+# ============================================================================
+# NEWS ENDPOINTS
+# ============================================================================
+
+@app.route('/api/news/<symbol>', methods=['GET'])
+def get_asset_news(symbol):
     """
-    Search for stocks (from test2.py)
+    Get news for a specific asset
+    
     Query params:
-    - query: search query (required)
-    - max_results: maximum number of results (default: 5)
-    - news_count: number of news items to include (default: 3)
+    - days_back: number of days to look back (default: 7)
+    
+    Example: /api/news/RELIANCE.NS?days_back=7
     """
     try:
-        query = request.args.get('query')
-        if not query:
-            return jsonify({'error': 'Query parameter is required'}), 400
+        days_back = int(request.args.get('days_back', 7))
         
-        max_results = int(request.args.get('max_results', 5))
-        #news_count = int(request.args.get('news_count', 3))
-        
-        # Perform search (from test2.py)
-        search_result = yf.Search(query, max_results=max_results)
+        news = news_service.get_company_news(symbol, days_back)
         
         return jsonify({
-            'query': query,
-            'results': search_result.response
-        }), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
-
-@app.route('/api/stock/quote/<symbol>', methods=['GET'])
-def get_stock_quote(symbol):
-    """Get current stock quote"""
-    try:
-        ticker = yf.Ticker(symbol)
-        
-        # Get current data
-        hist = ticker.history(period='1d', interval='1m')
-        if hist.empty:
-            return jsonify({'error': f'No data found for symbol {symbol}'}), 404
-        
-        latest = hist.iloc[-1]
-        
-        quote = {
             'symbol': symbol,
-            'price': float(latest['Close']),
-            'open': float(latest['Open']),
-            'high': float(latest['High']),
-            'low': float(latest['Low']),
-            'volume': int(latest['Volume']),
-            'timestamp': hist.index[-1].isoformat()
-        }
-        
-        return jsonify(quote), 200
-        
+            'days_back': days_back,
+            'count': len(news),
+            'news': news
+        }), 200
+    
     except Exception as e:
+        logger.error(f"Error fetching news: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/stock/multiple', methods=['POST'])
-def get_multiple_stocks():
+@app.route('/api/news/market/<category>', methods=['GET'])
+def get_market_news(category):
     """
-    Get data for multiple stocks at once
+    Get general market news
+    
+    Categories: general, forex, crypto, merger
+    Query params:
+    - count: number of articles (default: 10)
+    
+    Example: /api/news/market/crypto?count=5
+    """
+    try:
+        count = int(request.args.get('count', 10))
+        
+        news = news_service.get_market_news(category, count)
+        
+        return jsonify({
+            'category': category,
+            'count': len(news),
+            'news': news
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error fetching market news: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/sentiment/<symbol>', methods=['GET'])
+def get_news_sentiment(symbol):
+    """
+    Get aggregated news sentiment for an asset
+    
+    Query params:
+    - days_back: number of days to analyze (default: 7)
+    
+    Example: /api/sentiment/RELIANCE.NS?days_back=7
+    """
+    try:
+        days_back = int(request.args.get('days_back', 7))
+        
+        sentiment = news_service.get_news_sentiment_summary(symbol, days_back)
+        
+        return jsonify(sentiment), 200
+    
+    except Exception as e:
+        logger.error(f"Error fetching sentiment: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# RISK ANALYSIS ENDPOINTS
+# ============================================================================
+
+@app.route('/api/risk/<symbol>', methods=['GET'])
+def analyze_risk(symbol):
+    """
+    Analyze risk for an asset
+    
+    Query params:
+    - period: lookback period for analysis (default: 3mo)
+    - include_news: include news sentiment in analysis (default: true)
+    
+    Example: /api/risk/RELIANCE.NS?period=3mo&include_news=true
+    """
+    try:
+        period = request.args.get('period', '3mo')
+        include_news = request.args.get('include_news', 'true').lower() == 'true'
+        
+        # Fetch historical data
+        historical_data = data_fetcher.get_historical_data(symbol, period, '1d')
+        
+        if historical_data.empty:
+            return jsonify({
+                'error': f'No data found for {symbol}'
+            }), 404
+        
+        # Get current price
+        current_price_data = data_fetcher.get_current_price(symbol)
+        current_price = current_price_data['price'] if current_price_data else historical_data['Close'].iloc[-1]
+        
+        # Get news sentiment if requested
+        news_sentiment = None
+        if include_news:
+            news_sentiment = news_service.get_news_sentiment_summary(symbol, 7)
+        
+        # Calculate risk score
+        risk_analysis = RiskAnalyzer.calculate_risk_score(
+            historical_data,
+            current_price,
+            news_sentiment
+        )
+        
+        return jsonify({
+            'symbol': symbol,
+            'current_price': float(current_price),
+            'analysis_period': period,
+            'risk_analysis': risk_analysis
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error analyzing risk: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# PREDICTION ENDPOINTS
+# ============================================================================
+
+@app.route('/api/predict/<symbol>', methods=['GET'])
+def predict_prices(symbol):
+    """
+    Predict future prices using ML
+    
+    Query params:
+    - days: number of days to predict (default: 30)
+    - method: ml or simple (default: ml)
+    
+    Example: /api/predict/RELIANCE.NS?days=30&method=ml
+    """
+    try:
+        days = int(request.args.get('days', 30))
+        method = request.args.get('method', 'ml').lower()
+        
+        # Validate days
+        if days < 1 or days > 90:
+            return jsonify({
+                'error': 'Days must be between 1 and 90'
+            }), 400
+        
+        # Fetch historical data (use more data for better predictions)
+        historical_data = data_fetcher.get_historical_data(symbol, '1y', '1d')
+        
+        if historical_data.empty or len(historical_data) < 60:
+            return jsonify({
+                'error': f'Insufficient historical data for {symbol}'
+            }), 404
+        
+        # Make predictions
+        if method == 'ml':
+            try:
+                predictor = MLPredictor()
+                prediction = predictor.predict_future(historical_data, days)
+            except Exception as ml_error:
+                logger.warning(f"ML prediction failed, falling back to simple method: {str(ml_error)}")
+                prediction = SimpleMovingAveragePredictor.predict(historical_data, days)
+        else:
+            prediction = SimpleMovingAveragePredictor.predict(historical_data, days)
+        
+        return jsonify({
+            'symbol': symbol,
+            'prediction_method': method,
+            'prediction': prediction
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error predicting prices: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# INSIGHTS ENDPOINTS
+# ============================================================================
+
+@app.route('/api/insights/<symbol>', methods=['GET'])
+def get_investment_insights(symbol):
+    """
+    Get comprehensive AI-powered investment insights
+    
+    Query params:
+    - include_prediction: include price predictions (default: true)
+    - include_news: include news sentiment (default: true)
+    - prediction_days: days to predict (default: 30)
+    
+    Example: /api/insights/RELIANCE.NS?include_prediction=true&include_news=true
+    """
+    try:
+        include_prediction = request.args.get('include_prediction', 'true').lower() == 'true'
+        include_news = request.args.get('include_news', 'true').lower() == 'true'
+        prediction_days = int(request.args.get('prediction_days', 30))
+        
+        # Fetch historical data
+        historical_data = data_fetcher.get_historical_data(symbol, '1y', '1d')
+        
+        if historical_data.empty:
+            return jsonify({
+                'error': f'No data found for {symbol}'
+            }), 404
+        
+        # Get current price
+        current_price_data = data_fetcher.get_current_price(symbol)
+        current_price = current_price_data['price'] if current_price_data else historical_data['Close'].iloc[-1]
+        
+        # Get risk analysis
+        news_sentiment = None
+        if include_news:
+            news_sentiment = news_service.get_news_sentiment_summary(symbol, 7)
+        
+        risk_analysis = RiskAnalyzer.calculate_risk_score(
+            historical_data,
+            current_price,
+            news_sentiment
+        )
+        
+        # Get price prediction
+        prediction = None
+        if include_prediction:
+            try:
+                predictor = MLPredictor()
+                prediction = predictor.predict_future(historical_data, prediction_days)
+            except Exception as e:
+                logger.warning(f"ML prediction failed: {str(e)}")
+                prediction = SimpleMovingAveragePredictor.predict(historical_data, prediction_days)
+        else:
+            # Provide dummy prediction for insights generation
+            prediction = {
+                'summary': {
+                    'expected_change_percent': 0,
+                    'trend': 'neutral',
+                    'confidence': 'medium'
+                }
+            }
+        
+        # Generate insights
+        insights = InsightsGenerator.generate_asset_insights(
+            symbol,
+            current_price,
+            historical_data,
+            risk_analysis,
+            prediction,
+            news_sentiment
+        )
+        
+        return jsonify(insights), 200
+    
+    except Exception as e:
+        logger.error(f"Error generating insights: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# PORTFOLIO ANALYSIS (Multi-asset)
+# ============================================================================
+
+@app.route('/api/portfolio/analyze', methods=['POST'])
+def analyze_portfolio():
+    """
+    Analyze a portfolio of multiple assets
+    
     Request body:
     {
-        "symbols": ["AAPL", "MSFT", "GOOGL"],
-        "timeframe": "1M"
+        "assets": [
+            {"symbol": "RELIANCE.NS", "quantity": 10, "category": "stocks"},
+            {"symbol": "BTC-USD", "quantity": 0.5, "category": "crypto"}
+        ]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'assets' not in data:
+            return jsonify({'error': 'assets array is required'}), 400
+        
+        assets = data['assets']
+        portfolio_results = []
+        total_value = 0
+        
+        for asset in assets:
+            symbol = asset.get('symbol')
+            quantity = asset.get('quantity', 0)
+            category = asset.get('category', 'stocks')
+            
+            # Get current price
+            price_data = data_fetcher.get_current_price(symbol)
+            
+            if price_data:
+                current_price = price_data['price']
+                asset_value = current_price * quantity
+                total_value += asset_value
+                
+                # Get basic risk score
+                historical_data = data_fetcher.get_historical_data(symbol, '3mo', '1d')
+                risk_analysis = RiskAnalyzer.calculate_risk_score(historical_data, current_price)
+                
+                portfolio_results.append({
+                    'symbol': symbol,
+                    'category': category,
+                    'quantity': quantity,
+                    'current_price': current_price,
+                    'asset_value': round(asset_value, 2),
+                    'risk_score': risk_analysis.get('risk_score', 50),
+                    'risk_level': risk_analysis.get('risk_level', 'medium')
+                })
+            else:
+                portfolio_results.append({
+                    'symbol': symbol,
+                    'category': category,
+                    'error': 'Unable to fetch price'
+                })
+        
+        # Calculate portfolio-level metrics
+        if portfolio_results:
+            avg_risk_score = sum(a['risk_score'] for a in portfolio_results if 'risk_score' in a) / len([a for a in portfolio_results if 'risk_score' in a])
+            
+            # Determine portfolio risk level
+            if avg_risk_score < 30:
+                portfolio_risk = 'low'
+            elif avg_risk_score < 50:
+                portfolio_risk = 'medium-low'
+            elif avg_risk_score < 70:
+                portfolio_risk = 'medium'
+            else:
+                portfolio_risk = 'high'
+        else:
+            avg_risk_score = 50
+            portfolio_risk = 'medium'
+        
+        return jsonify({
+            'portfolio': portfolio_results,
+            'summary': {
+                'total_assets': len(assets),
+                'total_value': round(total_value, 2),
+                'average_risk_score': round(avg_risk_score, 2),
+                'portfolio_risk_level': portfolio_risk
+            }
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error analyzing portfolio: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# BATCH OPERATIONS
+# ============================================================================
+
+@app.route('/api/batch/quotes', methods=['POST'])
+def get_batch_quotes():
+    """
+    Get quotes for multiple assets at once
+    
+    Request body:
+    {
+        "symbols": ["RELIANCE.NS", "TCS.NS", "BTC-USD"]
     }
     """
     try:
@@ -186,75 +585,30 @@ def get_multiple_stocks():
             return jsonify({'error': 'symbols array is required'}), 400
         
         symbols = data['symbols']
-        timeframe = data.get('timeframe', '1M').upper()
-        
-        if timeframe not in PERIOD_INTERVAL_MAP:
-            return jsonify({
-                'error': f'Invalid timeframe. Choose from: {", ".join(PERIOD_INTERVAL_MAP.keys())}'
-            }), 400
-        
-        period = PERIOD_INTERVAL_MAP[timeframe]['period']
-        interval = PERIOD_INTERVAL_MAP[timeframe]['interval']
-        
-        results = {}
-        
-        for symbol in symbols:
-            try:
-                ticker = yf.Ticker(symbol)
-                history = ticker.history(period=period, interval=interval)
-                
-                if not history.empty:
-                    history_reset = history.reset_index()
-                    data_list = history_reset.to_dict(orient='records')
-                    
-                    # Convert timestamps
-                    for record in data_list:
-                        if 'Date' in record or 'Datetime' in record:
-                            date_key = 'Date' if 'Date' in record else 'Datetime'
-                            record[date_key] = record[date_key].isoformat() if hasattr(record[date_key], 'isoformat') else str(record[date_key])
-                    
-                    results[symbol] = {
-                        'success': True,
-                        'data': data_list
-                    }
-                else:
-                    results[symbol] = {
-                        'success': False,
-                        'error': 'No data found'
-                    }
-            except Exception as e:
-                results[symbol] = {
-                    'success': False,
-                    'error': str(e)
-                }
+        results = data_fetcher.get_multiple_prices(symbols)
         
         return jsonify({
-            'timeframe': timeframe,
-            'period': period,
-            'interval': interval,
-            'results': results
+            'count': len(results),
+            'quotes': results
         }), 200
-        
+    
     except Exception as e:
+        logger.error(f"Error fetching batch quotes: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/api/timeframes', methods=['GET'])
-def get_available_timeframes():
-    """Get available timeframes and their configurations"""
-    return jsonify({
-        'timeframes': PERIOD_INTERVAL_MAP
-    }), 200
+# ============================================================================
+# WEBSOCKET FOR REAL-TIME DATA
+# ============================================================================
 
-
-# WebSocket endpoint for real-time streaming (from test.py)
 @sock.route('/ws/stream')
 def websocket_stream(ws):
     """
-    WebSocket endpoint for real-time stock data streaming
-    Client should send JSON message with symbols to subscribe:
-    {"action": "subscribe", "symbols": ["AAPL", "BTC-USD"]}
-    {"action": "unsubscribe"}
+    WebSocket endpoint for real-time data streaming
+    
+    Client messages:
+    - Subscribe: {"action": "subscribe", "symbols": ["RELIANCE.NS", "BTC-USD"]}
+    - Unsubscribe: {"action": "unsubscribe"}
     """
     connection_id = id(ws)
     active_ws_connections[connection_id] = {'ws': ws, 'task': None, 'symbols': []}
@@ -270,11 +624,11 @@ def websocket_stream(ws):
                     if action == 'subscribe':
                         symbols = data.get('symbols', [])
                         if symbols:
-                            # Cancel existing task if any
+                            # Cancel existing task
                             if active_ws_connections[connection_id]['task']:
                                 active_ws_connections[connection_id]['task'].cancel()
                             
-                            # Start streaming in background thread
+                            # Start streaming
                             active_ws_connections[connection_id]['symbols'] = symbols
                             thread = threading.Thread(
                                 target=stream_stock_data,
@@ -300,7 +654,7 @@ def websocket_stream(ws):
                         ws.send(json.dumps({
                             'type': 'unsubscribed'
                         }))
-                    
+                
                 except json.JSONDecodeError:
                     ws.send(json.dumps({
                         'type': 'error',
@@ -308,10 +662,9 @@ def websocket_stream(ws):
                     }))
     
     except Exception as e:
-        print(f"WebSocket error: {e}")
+        logger.error(f"WebSocket error: {str(e)}")
     
     finally:
-        # Cleanup
         if connection_id in active_ws_connections:
             if active_ws_connections[connection_id]['task']:
                 active_ws_connections[connection_id]['task'].cancel()
@@ -319,9 +672,7 @@ def websocket_stream(ws):
 
 
 def stream_stock_data(ws, symbols):
-    """
-    Stream stock data by polling yfinance at regular intervals
-    """
+    """Stream stock data at regular intervals"""
     import time
     
     try:
@@ -333,32 +684,8 @@ def stream_stock_data(ws, symbols):
         
         while True:
             try:
-                # Fetch current data for all symbols
-                stock_data = {}
+                stock_data = data_fetcher.get_multiple_prices(symbols)
                 
-                for symbol in symbols:
-                    try:
-                        ticker = yf.Ticker(symbol)
-                        hist = ticker.history(period='1d', interval='1m')
-                        
-                        if not hist.empty:
-                            latest = hist.iloc[-1]
-                            stock_data[symbol] = {
-                                'symbol': symbol,
-                                'price': float(latest['Close']),
-                                'open': float(latest['Open']),
-                                'high': float(latest['High']),
-                                'low': float(latest['Low']),
-                                'volume': int(latest['Volume']),
-                                'timestamp': hist.index[-1].isoformat()
-                            }
-                    except Exception as e:
-                        stock_data[symbol] = {
-                            'symbol': symbol,
-                            'error': str(e)
-                        }
-                
-                # Send data
                 ws.send(json.dumps({
                     'type': 'data',
                     'data': stock_data,
@@ -368,11 +695,11 @@ def stream_stock_data(ws, symbols):
                 time.sleep(5)
             
             except Exception as e:
-                print(f"Error in stream loop: {e}")
+                logger.error(f"Error in stream loop: {str(e)}")
                 break
     
     except Exception as e:
-        print(f"Stream error: {e}")
+        logger.error(f"Stream error: {str(e)}")
         try:
             ws.send(json.dumps({
                 'type': 'error',
@@ -382,18 +709,112 @@ def stream_stock_data(ws, symbols):
             pass
 
 
-if __name__ == '__main__':
-    print("Starting BigBull Flask Server...")
-    print("Server running on http://localhost:5000")
-    print("\nAvailable endpoints:")
-    print("  - GET  /health")
-    print("  - GET  /api/stock/history/<symbol>")
-    print("  - GET  /api/stock/info/<symbol>")
-    print("  - GET  /api/stock/quote/<symbol>")
-    print("  - GET  /api/search")
-    print("  - POST /api/stock/multiple")
-    print("  - GET  /api/timeframes")
-    print("  - WS   /ws/stream")
-    print("\n")
+# ============================================================================
+# UTILITY ENDPOINTS
+# ============================================================================
+
+@app.route('/api/timeframes', methods=['GET'])
+def get_timeframes():
+    """Get available timeframes"""
+    return jsonify({
+        'timeframes': config.PERIOD_INTERVAL_MAP
+    }), 200
+
+
+@app.route('/api/categories', methods=['GET'])
+def get_categories():
+    """Get available asset categories"""
+    return jsonify({
+        'categories': config.ASSET_CATEGORIES
+    }), 200
+
+
+@app.route('/api/popular/<category>', methods=['GET'])
+def get_popular_assets(category):
+    """
+    Get popular assets by category
     
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    Example: /api/popular/stocks
+    """
+    try:
+        if category == 'stocks':
+            assets = config.POPULAR_INDIAN_STOCKS
+        elif category == 'crypto':
+            assets = config.POPULAR_CRYPTOS
+        elif category == 'mutualfunds':
+            assets = config.POPULAR_MUTUAL_FUNDS
+        else:
+            return jsonify({
+                'error': f'Invalid category. Choose from: {", ".join(config.ASSET_CATEGORIES)}'
+            }), 400
+        
+        return jsonify({
+            'category': category,
+            'count': len(assets),
+            'assets': assets
+        }), 200
+    
+    except Exception as e:
+        logger.error(f"Error fetching popular assets: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ============================================================================
+# ERROR HANDLERS
+# ============================================================================
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Endpoint not found'}), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({'error': 'Internal server error'}), 500
+
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+if __name__ == '__main__':
+    print("=" * 80)
+    print("🚀 BigBull Portfolio Management Microservice")
+    print("=" * 80)
+    print(f"\n📡 Server running on http://{config.FLASK_HOST}:{config.FLASK_PORT}")
+    print(f"🔧 Environment: {config.FLASK_ENV}")
+    print(f"🔑 Finnhub API: {'Configured' if config.FINNHUB_API_KEY else 'Not configured'}")
+    print("\n📚 Available API Endpoints:\n")
+    
+    endpoints = [
+        ("Health Check", "GET", "/health"),
+        ("Search Assets", "GET", "/api/search/<category>?query=<q>"),
+        ("Asset Quote", "GET", "/api/asset/<category>/<symbol>/quote"),
+        ("Asset History", "GET", "/api/asset/<category>/<symbol>/history"),
+        ("Asset Info", "GET", "/api/asset/<category>/<symbol>/info"),
+        ("Asset News", "GET", "/api/news/<symbol>"),
+        ("Market News", "GET", "/api/news/market/<category>"),
+        ("News Sentiment", "GET", "/api/sentiment/<symbol>"),
+        ("Risk Analysis", "GET", "/api/risk/<symbol>"),
+        ("Price Prediction", "GET", "/api/predict/<symbol>"),
+        ("Investment Insights", "GET", "/api/insights/<symbol>"),
+        ("Portfolio Analysis", "POST", "/api/portfolio/analyze"),
+        ("Batch Quotes", "POST", "/api/batch/quotes"),
+        ("Popular Assets", "GET", "/api/popular/<category>"),
+        ("Available Timeframes", "GET", "/api/timeframes"),
+        ("Asset Categories", "GET", "/api/categories"),
+        ("WebSocket Stream", "WS", "/ws/stream")
+    ]
+    
+    for name, method, endpoint in endpoints:
+        print(f"  {method:6s} {endpoint:50s} - {name}")
+    
+    print("\n" + "=" * 80)
+    print("✨ Ready to serve requests!")
+    print("=" * 80 + "\n")
+    
+    app.run(
+        debug=config.FLASK_DEBUG,
+        host=config.FLASK_HOST,
+        port=config.FLASK_PORT
+    )
