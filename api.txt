@@ -1,0 +1,1352 @@
+================================================================================
+            BIGBULL PORTFOLIO MANAGEMENT PLATFORM - COMPLETE API REFERENCE
+================================================================================
+
+SYSTEM OVERVIEW
+---------------
+- Java Backend: http://localhost:8080
+- Python Backend: http://localhost:5000
+- Database: MySQL (pubs)
+- Username Format: your-username (replace with your actual username)
+
+================================================================================
+                        JAVA API ENDPOINTS (Port 8080)
+================================================================================
+
+------------------------------------------------------------------------------
+1. WALLET ENDPOINTS
+------------------------------------------------------------------------------
+
+1.1 CREATE WALLET
+-----------------
+Method: POST
+URL: http://localhost:8080/api/wallet/create
+Parameters: username, initialBalance
+
+CURL:
+curl -X POST "http://localhost:8080/api/wallet/create?username=your-username&initialBalance=100000"
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/wallet/create?username=your-username&initialBalance=100000
+- Headers: None required
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "username": "your-username",
+  "balance": 100000.0,
+  "totalInvested": 0.0,
+  "totalWithdrawn": 0.0,
+  "createdAt": "2026-02-03T10:00:00",
+  "updatedAt": "2026-02-03T10:00:00"
+}
+
+
+1.2 GET WALLET BY USERNAME
+---------------------------
+Method: GET
+URL: http://localhost:8080/api/wallet/{username}
+
+CURL:
+curl -X GET "http://localhost:8080/api/wallet/your-username"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/wallet/your-username
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "username": "your-username",
+  "balance": 100000.0,
+  "totalInvested": 0.0,
+  "totalWithdrawn": 0.0,
+  "createdAt": "2026-02-03T10:00:00",
+  "updatedAt": "2026-02-03T10:00:00"
+}
+
+
+1.3 DEPOSIT FUNDS
+-----------------
+Method: PUT
+URL: http://localhost:8080/api/wallet/deposit
+Parameters: username, amount
+
+CURL:
+curl -X PUT "http://localhost:8080/api/wallet/deposit?username=your-username&amount=5000"
+
+POSTMAN:
+- Method: PUT
+- URL: http://localhost:8080/api/wallet/deposit?username=your-username&amount=5000
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "username": "your-username",
+  "balance": 105000.0,
+  "totalInvested": 0.0,
+  "totalWithdrawn": 0.0,
+  "createdAt": "2026-02-03T10:00:00",
+  "updatedAt": "2026-02-03T10:30:00"
+}
+
+
+1.4 WITHDRAW FUNDS
+------------------
+Method: PUT
+URL: http://localhost:8080/api/wallet/withdraw
+Parameters: username, amount
+
+CURL:
+curl -X PUT "http://localhost:8080/api/wallet/withdraw?username=your-username&amount=2000"
+
+POSTMAN:
+- Method: PUT
+- URL: http://localhost:8080/api/wallet/withdraw?username=your-username&amount=2000
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "username": "your-username",
+  "balance": 103000.0,
+  "totalInvested": 0.0,
+  "totalWithdrawn": 0.0,
+  "createdAt": "2026-02-03T10:00:00",
+  "updatedAt": "2026-02-03T10:45:00"
+}
+
+
+------------------------------------------------------------------------------
+2. ASSET ENDPOINTS
+------------------------------------------------------------------------------
+
+2.1 CREATE ASSET
+----------------
+Method: POST
+URL: http://localhost:8080/api/assets
+Content-Type: application/json
+
+CURL:
+curl -X POST "http://localhost:8080/api/assets" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "type": "STOCK",
+    "quantity": 0,
+    "costPerUnit": 0
+  }'
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/assets
+- Headers:
+  - Content-Type: application/json
+- Body (JSON):
+{
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "type": "STOCK",
+  "quantity": 0,
+  "costPerUnit": 0
+}
+- Expected Response Code: 200 OK / 201 Created
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "type": "STOCK",
+  "quantity": 0.0,
+  "costPerUnit": 0.0,
+  "createdAt": "2026-02-03T10:00:00",
+  "updatedAt": "2026-02-03T10:00:00"
+}
+
+
+2.2 GET ALL ASSETS
+------------------
+Method: GET
+URL: http://localhost:8080/api/assets
+
+CURL:
+curl -X GET "http://localhost:8080/api/assets"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/assets
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+[
+  {
+    "id": 1,
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "type": "STOCK",
+    "quantity": 0.0,
+    "costPerUnit": 0.0,
+    "createdAt": "2026-02-03T10:00:00",
+    "updatedAt": "2026-02-03T10:00:00"
+  },
+  {
+    "id": 2,
+    "symbol": "BTC-USD",
+    "name": "Bitcoin",
+    "type": "CRYPTO",
+    "quantity": 0.0,
+    "costPerUnit": 0.0,
+    "createdAt": "2026-02-03T10:05:00",
+    "updatedAt": "2026-02-03T10:05:00"
+  }
+]
+
+
+2.3 GET ASSET BY ID
+-------------------
+Method: GET
+URL: http://localhost:8080/api/assets/{id}
+
+CURL:
+curl -X GET "http://localhost:8080/api/assets/1"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/assets/1
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "type": "STOCK",
+  "quantity": 0.0,
+  "costPerUnit": 0.0,
+  "createdAt": "2026-02-03T10:00:00",
+  "updatedAt": "2026-02-03T10:00:00"
+}
+
+
+2.4 GET ASSET BY SYMBOL
+-----------------------
+Method: GET
+URL: http://localhost:8080/api/assets/symbol/{symbol}
+
+CURL:
+curl -X GET "http://localhost:8080/api/assets/symbol/AAPL"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/assets/symbol/AAPL
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "type": "STOCK",
+  "quantity": 0.0,
+  "costPerUnit": 0.0,
+  "createdAt": "2026-02-03T10:00:00",
+  "updatedAt": "2026-02-03T10:00:00"
+}
+
+
+2.5 UPDATE ASSET
+----------------
+Method: PUT
+URL: http://localhost:8080/api/assets/{id}
+Content-Type: application/json
+
+CURL:
+curl -X PUT "http://localhost:8080/api/assets/1" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "type": "STOCK",
+    "quantity": 10,
+    "costPerUnit": 150.0
+  }'
+
+POSTMAN:
+- Method: PUT
+- URL: http://localhost:8080/api/assets/1
+- Headers:
+  - Content-Type: application/json
+- Body (JSON):
+{
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "type": "STOCK",
+  "quantity": 10,
+  "costPerUnit": 150.0
+}
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "type": "STOCK",
+  "quantity": 10.0,
+  "costPerUnit": 150.0,
+  "createdAt": "2026-02-03T10:00:00",
+  "updatedAt": "2026-02-03T10:30:00"
+}
+
+
+2.6 DELETE ASSET
+----------------
+Method: DELETE
+URL: http://localhost:8080/api/assets/{id}
+
+CURL:
+curl -X DELETE "http://localhost:8080/api/assets/1"
+
+POSTMAN:
+- Method: DELETE
+- URL: http://localhost:8080/api/assets/1
+- Headers: None
+- Body: None
+- Expected Response Code: 204 No Content / 200 OK
+
+JSON RESPONSE:
+(No content or confirmation message)
+
+
+2.7 GET LIVE STOCK QUOTE
+------------------------
+Method: GET
+URL: http://localhost:8080/api/assets/quote/stock/{symbol}
+
+CURL:
+curl -X GET "http://localhost:8080/api/assets/quote/stock/AAPL"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/assets/quote/stock/AAPL
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "symbol": "AAPL",
+  "price": 189.95,
+  "change": 2.50,
+  "changePercent": 1.33,
+  "timestamp": "2026-02-03T15:45:00"
+}
+
+
+2.8 GET LIVE CRYPTO QUOTE
+-------------------------
+Method: GET
+URL: http://localhost:8080/api/assets/quote/crypto/{symbol}
+
+CURL:
+curl -X GET "http://localhost:8080/api/assets/quote/crypto/BTC-USD"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/assets/quote/crypto/BTC-USD
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "symbol": "BTC-USD",
+  "price": 45230.50,
+  "change": 500.25,
+  "changePercent": 1.12,
+  "timestamp": "2026-02-03T15:45:00"
+}
+
+
+------------------------------------------------------------------------------
+3. TRANSACTION ENDPOINTS
+------------------------------------------------------------------------------
+
+3.1 EXECUTE BUY TRANSACTION
+----------------------------
+Method: POST
+URL: http://localhost:8080/api/transactions
+Parameters: username, symbol, type=BUY, units
+
+CURL:
+curl -X POST "http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=BUY&units=10"
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=BUY&units=10
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "username": "your-username",
+  "asset": {
+    "id": 1,
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "type": "STOCK",
+    "quantity": 10.0,
+    "costPerUnit": 189.95,
+    "createdAt": "2026-02-03T10:00:00",
+    "updatedAt": "2026-02-03T16:00:00"
+  },
+  "type": "BUY",
+  "units": 10,
+  "quantity": 10.0,
+  "price": 189.95,
+  "pricePerUnit": 189.95,
+  "totalAmount": 1899.50,
+  "transactionDate": "2026-02-03T16:00:00"
+}
+
+
+3.2 EXECUTE SELL TRANSACTION
+-----------------------------
+Method: POST
+URL: http://localhost:8080/api/transactions
+Parameters: username, symbol, type=SELL, units
+
+CURL:
+curl -X POST "http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=SELL&units=5"
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=SELL&units=5
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 2,
+  "username": "your-username",
+  "asset": {
+    "id": 1,
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "type": "STOCK",
+    "quantity": 5.0,
+    "costPerUnit": 189.95,
+    "createdAt": "2026-02-03T10:00:00",
+    "updatedAt": "2026-02-03T16:05:00"
+  },
+  "type": "SELL",
+  "units": 5,
+  "quantity": 5.0,
+  "price": 195.50,
+  "pricePerUnit": 195.50,
+  "totalAmount": 977.50,
+  "transactionDate": "2026-02-03T16:05:00"
+}
+
+
+3.3 GET ALL TRANSACTIONS
+------------------------
+Method: GET
+URL: http://localhost:8080/api/transactions
+
+CURL:
+curl -X GET "http://localhost:8080/api/transactions"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/transactions
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+[
+  {
+    "id": 1,
+    "username": "your-username",
+    "asset": {
+      "id": 1,
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "STOCK",
+      "quantity": 5.0,
+      "costPerUnit": 189.95,
+      "createdAt": "2026-02-03T10:00:00",
+      "updatedAt": "2026-02-03T16:05:00"
+    },
+    "type": "BUY",
+    "units": 10,
+    "quantity": 10.0,
+    "price": 189.95,
+    "pricePerUnit": 189.95,
+    "totalAmount": 1899.50,
+    "transactionDate": "2026-02-03T16:00:00"
+  },
+  {
+    "id": 2,
+    "username": "your-username",
+    "asset": {
+      "id": 1,
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "STOCK",
+      "quantity": 5.0,
+      "costPerUnit": 189.95,
+      "createdAt": "2026-02-03T10:00:00",
+      "updatedAt": "2026-02-03T16:05:00"
+    },
+    "type": "SELL",
+    "units": 5,
+    "quantity": 5.0,
+    "price": 195.50,
+    "pricePerUnit": 195.50,
+    "totalAmount": 977.50,
+    "transactionDate": "2026-02-03T16:05:00"
+  }
+]
+
+
+3.4 GET TRANSACTION BY ID
+--------------------------
+Method: GET
+URL: http://localhost:8080/api/transactions/{id}
+
+CURL:
+curl -X GET "http://localhost:8080/api/transactions/1"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/transactions/1
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "id": 1,
+  "username": "your-username",
+  "asset": {
+    "id": 1,
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "type": "STOCK",
+    "quantity": 5.0,
+    "costPerUnit": 189.95,
+    "createdAt": "2026-02-03T10:00:00",
+    "updatedAt": "2026-02-03T16:05:00"
+  },
+  "type": "BUY",
+  "units": 10,
+  "quantity": 10.0,
+  "price": 189.95,
+  "pricePerUnit": 189.95,
+  "totalAmount": 1899.50,
+  "transactionDate": "2026-02-03T16:00:00"
+}
+
+
+3.5 GET TRANSACTIONS BY USERNAME
+--------------------------------
+Method: GET
+URL: http://localhost:8080/api/transactions/user/{username}
+
+CURL:
+curl -X GET "http://localhost:8080/api/transactions/user/your-username"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/transactions/user/your-username
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+[
+  {
+    "id": 1,
+    "username": "your-username",
+    "asset": {
+      "id": 1,
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "STOCK",
+      "quantity": 5.0,
+      "costPerUnit": 189.95,
+      "createdAt": "2026-02-03T10:00:00",
+      "updatedAt": "2026-02-03T16:05:00"
+    },
+    "type": "BUY",
+    "units": 10,
+    "quantity": 10.0,
+    "price": 189.95,
+    "pricePerUnit": 189.95,
+    "totalAmount": 1899.50,
+    "transactionDate": "2026-02-03T16:00:00"
+  },
+  {
+    "id": 2,
+    "username": "your-username",
+    "asset": {
+      "id": 1,
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "STOCK",
+      "quantity": 5.0,
+      "costPerUnit": 189.95,
+      "createdAt": "2026-02-03T10:00:00",
+      "updatedAt": "2026-02-03T16:05:00"
+    },
+    "type": "SELL",
+    "units": 5,
+    "quantity": 5.0,
+    "price": 195.50,
+    "pricePerUnit": 195.50,
+    "totalAmount": 977.50,
+    "transactionDate": "2026-02-03T16:05:00"
+  }
+]
+
+
+3.6 GET TRANSACTIONS BY ASSET ID
+--------------------------------
+Method: GET
+URL: http://localhost:8080/api/transactions/asset/{assetId}
+
+CURL:
+curl -X GET "http://localhost:8080/api/transactions/asset/1"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/transactions/asset/1
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+[
+  {
+    "id": 1,
+    "username": "your-username",
+    "asset": {
+      "id": 1,
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "type": "STOCK",
+      "quantity": 5.0,
+      "costPerUnit": 189.95,
+      "createdAt": "2026-02-03T10:00:00",
+      "updatedAt": "2026-02-03T16:05:00"
+    },
+    "type": "BUY",
+    "units": 10,
+    "quantity": 10.0,
+    "price": 189.95,
+    "pricePerUnit": 189.95,
+    "totalAmount": 1899.50,
+    "transactionDate": "2026-02-03T16:00:00"
+  }
+]
+
+
+------------------------------------------------------------------------------
+4. PORTFOLIO ENDPOINTS
+------------------------------------------------------------------------------
+
+4.1 GET PORTFOLIO LIST
+----------------------
+Method: GET
+URL: http://localhost:8080/api/portfolio/list
+
+CURL:
+curl -X GET "http://localhost:8080/api/portfolio/list"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/portfolio/list
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+[
+  {
+    "id": 1,
+    "username": "your-username",
+    "totalValue": 977.50,
+    "totalInvested": 1899.50,
+    "totalWithdrawn": 977.50,
+    "unrealizedGain": -922.00,
+    "unrealizedGainPercent": -48.53,
+    "assets": [
+      {
+        "id": 1,
+        "symbol": "AAPL",
+        "name": "Apple Inc.",
+        "type": "STOCK",
+        "quantity": 5.0,
+        "costPerUnit": 189.95,
+        "currentPrice": 195.50,
+        "totalValue": 977.50,
+        "gain": 27.75,
+        "gainPercent": 2.92
+      }
+    ]
+  }
+]
+
+
+================================================================================
+                      PYTHON API ENDPOINTS (Port 5000)
+================================================================================
+
+------------------------------------------------------------------------------
+1. HEALTH CHECK
+------------------------------------------------------------------------------
+
+1.1 HEALTH STATUS
+-----------------
+Method: GET
+URL: http://localhost:5000/health
+
+CURL:
+curl -X GET "http://localhost:5000/health"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:5000/health
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "status": "healthy",
+  "message": "Python API is running"
+}
+
+
+------------------------------------------------------------------------------
+2. STOCK ENDPOINTS
+------------------------------------------------------------------------------
+
+2.1 GET STOCK QUOTE
+-------------------
+Method: GET
+URL: http://localhost:5000/api/stock/quote/{symbol}
+
+CURL:
+curl -X GET "http://localhost:5000/api/stock/quote/AAPL"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:5000/api/stock/quote/AAPL
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "symbol": "AAPL",
+  "price": 189.95,
+  "change": 2.50,
+  "changePercent": 1.33,
+  "timestamp": "2026-02-03T15:45:00"
+}
+
+
+2.2 GET STOCK HISTORY
+---------------------
+Method: GET
+URL: http://localhost:5000/api/stock/history/{symbol}?period=1mo
+Query Parameters: period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
+
+CURL:
+curl -X GET "http://localhost:5000/api/stock/history/AAPL?period=1mo"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:5000/api/stock/history/AAPL?period=1mo
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "symbol": "AAPL",
+  "period": "1mo",
+  "data": [
+    {
+      "date": "2026-01-03",
+      "open": 180.50,
+      "high": 182.00,
+      "low": 179.50,
+      "close": 181.25,
+      "volume": 42000000
+    },
+    {
+      "date": "2026-01-04",
+      "open": 181.25,
+      "high": 183.50,
+      "low": 181.00,
+      "close": 182.75,
+      "volume": 45000000
+    }
+  ]
+}
+
+
+------------------------------------------------------------------------------
+3. CRYPTO ENDPOINTS
+------------------------------------------------------------------------------
+
+3.1 GET CRYPTO QUOTE
+--------------------
+Method: GET
+URL: http://localhost:5000/api/crypto/quote/{symbol}
+
+CURL:
+curl -X GET "http://localhost:5000/api/crypto/quote/BTC-USD"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:5000/api/crypto/quote/BTC-USD
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "symbol": "BTC-USD",
+  "price": 45230.50,
+  "change": 500.25,
+  "changePercent": 1.12,
+  "timestamp": "2026-02-03T15:45:00"
+}
+
+
+3.2 GET CRYPTO HISTORY
+----------------------
+Method: GET
+URL: http://localhost:5000/api/crypto/history/{symbol}?period=1mo
+Query Parameters: period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
+
+CURL:
+curl -X GET "http://localhost:5000/api/crypto/history/BTC-USD?period=1d"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:5000/api/crypto/history/BTC-USD?period=1d
+- Headers: None
+- Body: None
+- Expected Response Code: 200 OK
+
+JSON RESPONSE:
+{
+  "symbol": "BTC-USD",
+  "period": "1d",
+  "data": [
+    {
+      "time": "2026-02-03T00:00:00",
+      "open": 44800.00,
+      "high": 45500.00,
+      "low": 44700.00,
+      "close": 45230.50,
+      "volume": 28500000000
+    }
+  ]
+}
+
+
+================================================================================
+                      COMPLETE TESTING WORKFLOW
+================================================================================
+
+STEP 1: VERIFY SERVERS ARE RUNNING
+-----------------------------------
+CURL:
+curl -X GET "http://localhost:5000/health"
+curl -X GET "http://localhost:8080/actuator/health"
+
+Expected: Both return 200 OK
+
+
+STEP 2: CREATE WALLET
+---------------------
+CURL:
+curl -X POST "http://localhost:8080/api/wallet/create?username=your-username&initialBalance=100000"
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/wallet/create?username=your-username&initialBalance=100000
+
+Expected Response:
+{
+  "id": 1,
+  "username": "your-username",
+  "balance": 100000.0,
+  "totalInvested": 0.0,
+  "totalWithdrawn": 0.0,
+  "createdAt": "2026-02-03T10:00:00",
+  "updatedAt": "2026-02-03T10:00:00"
+}
+
+
+STEP 3: CREATE STOCK ASSET (AAPL)
+----------------------------------
+CURL:
+curl -X POST "http://localhost:8080/api/assets" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "AAPL",
+    "name": "Apple Inc.",
+    "type": "STOCK",
+    "quantity": 0,
+    "costPerUnit": 0
+  }'
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/assets
+- Headers: Content-Type: application/json
+- Body (JSON):
+{
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "type": "STOCK",
+  "quantity": 0,
+  "costPerUnit": 0
+}
+
+Expected Response Code: 200/201 OK
+
+
+STEP 4: CREATE CRYPTO ASSET (BTC-USD)
+--------------------------------------
+CURL:
+curl -X POST "http://localhost:8080/api/assets" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "symbol": "BTC-USD",
+    "name": "Bitcoin",
+    "type": "CRYPTO",
+    "quantity": 0,
+    "costPerUnit": 0
+  }'
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/assets
+- Headers: Content-Type: application/json
+- Body (JSON):
+{
+  "symbol": "BTC-USD",
+  "name": "Bitcoin",
+  "type": "CRYPTO",
+  "quantity": 0,
+  "costPerUnit": 0
+}
+
+Expected Response Code: 200/201 OK
+
+
+STEP 5: GET LIVE STOCK PRICE
+-----------------------------
+CURL:
+curl -X GET "http://localhost:5000/api/stock/quote/AAPL"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:5000/api/stock/quote/AAPL
+
+Expected Response: Live AAPL price
+
+
+STEP 6: GET LIVE CRYPTO PRICE
+------------------------------
+CURL:
+curl -X GET "http://localhost:5000/api/crypto/quote/BTC-USD"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:5000/api/crypto/quote/BTC-USD
+
+Expected Response: Live BTC price
+
+
+STEP 7: BUY 10 STOCKS (AAPL)
+----------------------------
+CURL:
+curl -X POST "http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=BUY&units=10"
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=BUY&units=10
+
+Expected Response:
+- Transaction created with live AAPL price
+- Wallet balance reduced
+- Asset quantity updated to 10
+
+
+STEP 8: BUY 2 CRYPTO (BTC)
+--------------------------
+CURL:
+curl -X POST "http://localhost:8080/api/transactions?username=your-username&symbol=BTC-USD&type=BUY&units=2"
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/transactions?username=your-username&symbol=BTC-USD&type=BUY&units=2
+
+Expected Response:
+- Transaction created with live BTC price
+- Wallet balance reduced further
+- Asset quantity updated to 2
+
+
+STEP 9: SELL 5 STOCKS (AAPL)
+----------------------------
+CURL:
+curl -X POST "http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=SELL&units=5"
+
+POSTMAN:
+- Method: POST
+- URL: http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=SELL&units=5
+
+Expected Response:
+- Transaction created
+- Wallet balance increased
+- Asset quantity reduced to 5
+
+
+STEP 10: CHECK FINAL WALLET
+---------------------------
+CURL:
+curl -X GET "http://localhost:8080/api/wallet/your-username"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/wallet/your-username
+
+Expected Response: Updated wallet with gains/losses
+
+
+STEP 11: VIEW ALL TRANSACTIONS
+-------------------------------
+CURL:
+curl -X GET "http://localhost:8080/api/transactions/user/your-username"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/transactions/user/your-username
+
+Expected Response: All BUY and SELL transactions
+
+
+STEP 12: VIEW PORTFOLIO
+-----------------------
+CURL:
+curl -X GET "http://localhost:8080/api/portfolio/list"
+
+POSTMAN:
+- Method: GET
+- URL: http://localhost:8080/api/portfolio/list
+
+Expected Response: Portfolio with unrealized gains/losses
+
+
+================================================================================
+                         ERROR RESPONSES
+================================================================================
+
+400 BAD REQUEST
+---------------
+{
+  "error": "Insufficient balance. Required: 100000, Available: 50000",
+  "timestamp": 1675356000000
+}
+
+{
+  "error": "Insufficient units. Required: 20, Available: 10",
+  "timestamp": 1675356000000
+}
+
+
+404 NOT FOUND
+-------------
+{
+  "error": "Asset not found: XYZ",
+  "timestamp": 1675356000000
+}
+
+{
+  "error": "Wallet not found: your-username",
+  "timestamp": 1675356000000
+}
+
+
+500 INTERNAL SERVER ERROR
+-------------------------
+{
+  "error": "Python API Error for BTC-USD: Connection timeout",
+  "timestamp": 1675356000000
+}
+
+
+================================================================================
+                         POSTMAN IMPORT JSON
+================================================================================
+
+Copy and paste this into Postman -> Import -> Paste Raw Text:
+
+{
+  "info": {
+    "name": "BigBull Trading Platform",
+    "description": "Complete API collection for stock/crypto trading",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Wallet",
+      "item": [
+        {
+          "name": "Create Wallet",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:8080/api/wallet/create?username=your-username&initialBalance=100000"
+          }
+        },
+        {
+          "name": "Get Wallet",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8080/api/wallet/your-username"
+          }
+        },
+        {
+          "name": "Deposit Funds",
+          "request": {
+            "method": "PUT",
+            "url": "http://localhost:8080/api/wallet/deposit?username=your-username&amount=5000"
+          }
+        },
+        {
+          "name": "Withdraw Funds",
+          "request": {
+            "method": "PUT",
+            "url": "http://localhost:8080/api/wallet/withdraw?username=your-username&amount=2000"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Assets",
+      "item": [
+        {
+          "name": "Create Asset",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:8080/api/assets",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"symbol\": \"AAPL\",\n  \"name\": \"Apple Inc.\",\n  \"type\": \"STOCK\",\n  \"quantity\": 0,\n  \"costPerUnit\": 0\n}"
+            }
+          }
+        },
+        {
+          "name": "Get All Assets",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8080/api/assets"
+          }
+        },
+        {
+          "name": "Get Asset by Symbol",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8080/api/assets/symbol/AAPL"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "Buy Stock",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=BUY&units=10"
+          }
+        },
+        {
+          "name": "Sell Stock",
+          "request": {
+            "method": "POST",
+            "url": "http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=SELL&units=5"
+          }
+        },
+        {
+          "name": "Get All Transactions",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8080/api/transactions"
+          }
+        },
+        {
+          "name": "Get User Transactions",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8080/api/transactions/user/your-username"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Python API",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/health"
+          }
+        },
+        {
+          "name": "Stock Quote",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/stock/quote/AAPL"
+          }
+        },
+        {
+          "name": "Crypto Quote",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:5000/api/crypto/quote/BTC-USD"
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+================================================================================
+                      DATABASE QUICK REFERENCE
+================================================================================
+
+Database: pubs
+
+TABLE: wallet
+CREATE TABLE wallet (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(255) NOT NULL UNIQUE,
+  balance DOUBLE NOT NULL,
+  total_invested DOUBLE DEFAULT 0,
+  total_withdrawn DOUBLE DEFAULT 0,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL
+);
+
+TABLE: assets
+CREATE TABLE assets (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  symbol VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
+  type VARCHAR(50) NOT NULL,
+  quantity DOUBLE NOT NULL,
+  cost_per_unit DOUBLE NOT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL
+);
+
+TABLE: transactions
+CREATE TABLE transactions (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(255) NOT NULL,
+  asset_id BIGINT NOT NULL,
+  type VARCHAR(10) NOT NULL,
+  units INT NOT NULL,
+  quantity DOUBLE NOT NULL,
+  price DOUBLE NOT NULL,
+  price_per_unit DOUBLE NOT NULL,
+  total_amount DOUBLE NOT NULL,
+  transaction_date DATETIME NOT NULL,
+  FOREIGN KEY (asset_id) REFERENCES assets(id)
+);
+
+
+================================================================================
+                          TROUBLESHOOTING
+================================================================================
+
+Issue: "Cannot invoke Object.toString() because the return value of Map.get() is null"
+Solution: Ensure Python API is running and returning proper JSON with "price" field
+
+Issue: "Insufficient balance"
+Solution: Create wallet with higher initialBalance or deposit funds first
+
+Issue: "Asset not found"
+Solution: Create the asset first before executing transactions
+
+Issue: "Connection refused on localhost:5000"
+Solution: Start Python backend: python app.py
+
+Issue: "Connection refused on localhost:8080"
+Solution: Rebuild Java: mvn clean install && mvn spring-boot:run
+
+Issue: "No suitable method found for getForEntity"
+Solution: Use restTemplate.exchange() instead of getForEntity()
+
+
+================================================================================
+                            QUICK COMMANDS
+================================================================================
+
+All commands use your-username - Replace with your actual username
+
+# Full workflow
+curl -X POST "http://localhost:8080/api/wallet/create?username=your-username&initialBalance=100000"
+curl -X POST "http://localhost:8080/api/assets" -H "Content-Type: application/json" -d '{"symbol":"AAPL","name":"Apple Inc.","type":"STOCK","quantity":0,"costPerUnit":0}'
+curl -X POST "http://localhost:8080/api/transactions?username=your-username&symbol=AAPL&type=BUY&units=10"
+curl -X GET "http://localhost:8080/api/wallet/your-username"
+curl -X GET "http://localhost:8080/api/transactions/user/your-username"
+
+
+================================================================================
+Last Updated: February 3, 2026
+Documentation Version: 1.0
+================================================================================

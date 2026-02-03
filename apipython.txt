@@ -1,0 +1,1064 @@
+================================================================================
+           BIGBULL PYTHON API DOCUMENTATION - All Endpoints & Features
+================================================================================
+
+API BASE URL: http://localhost:5000
+Last Updated: February 3, 2026
+
+================================================================================
+                            FEATURES OVERVIEW
+================================================================================
+
+✅ FEATURES INCLUDED:
+  • Real-time stock and crypto price quotes
+  • Historical data with multiple timeframes (1D, 5D, 1M, 3M, 6M, 1Y, 5Y, MAX)
+  • Advanced machine learning (Random Forest, Linear Regression)
+  • Quantum portfolio optimization using Qiskit QAOA algorithm
+  • Finnhub news integration and sentiment analysis
+  • Risk assessment with volatility analysis
+  • Price forecasting (next 10 days using Random Forest)
+  • AI-powered insights with technical analysis
+  • Real-time WebSocket streaming for multiple symbols
+  • Caching system for search results (5-minute TTL)
+  • Support for both US stocks and cryptocurrencies
+  • Comprehensive error handling and logging
+  • CORS enabled for cross-origin requests
+  • Moving averages (20-day, 50-day)
+  • Value at Risk (VaR) calculation at 95% confidence
+  • Maximum drawdown analysis
+  • Sharpe ratio calculation
+  • Fallback search with common stocks
+  • Sentiment analysis from news headlines
+  • Trading volume analysis
+  • Market capitalization tracking
+
+
+================================================================================
+                        COMPLETE ENDPOINT LISTING
+================================================================================
+
+========================================
+1. HEALTH & STATUS
+========================================
+
+✅ HEALTH CHECK
+URL: GET /health
+Description: Verify API is running
+Parameters: None
+Response Code: 200 OK
+
+Example Response:
+{
+  "status": "healthy",
+  "message": "Python API is running",
+  "timestamp": "2026-02-03T10:30:45.123456"
+}
+
+
+========================================
+2. STOCK ENDPOINTS
+========================================
+
+✅ GET STOCK QUOTE (REAL-TIME PRICE)
+URL: GET /api/stock/quote/<symbol>
+Description: Get current stock quote with live price and daily metrics
+Parameters: 
+  - symbol (required): Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)
+
+Example Request:
+  GET /api/stock/quote/AAPL
+
+Example Response:
+{
+  "symbol": "AAPL",
+  "price": 195.45,
+  "change": 2.50,
+  "changePercent": 1.29,
+  "timestamp": "2026-02-03T10:30:45.123456",
+  "open": 193.00,
+  "high": 196.50,
+  "low": 192.75,
+  "volume": 52500000,
+  "marketCap": 3100000000000
+}
+
+
+✅ GET STOCK HISTORY (OHLCV DATA)
+URL: GET /api/stock/history/<symbol>
+Description: Get historical OHLCV data with customizable timeframes
+Parameters:
+  - symbol (required): Stock ticker symbol
+  - timeframe (optional): 1D, 5D, 1M, 3M, 6M, 1Y, 5Y, MAX (default: 1M)
+  - period (optional): Custom period (overrides timeframe)
+  - interval (optional): Custom interval (1m, 5m, 30m, 1h, 1d, 1wk, 1mo)
+
+Example Request:
+  GET /api/stock/history/AAPL?timeframe=3M
+  GET /api/stock/history/MSFT?period=1mo&interval=1d
+
+Example Response:
+{
+  "symbol": "AAPL",
+  "timeframe": "3M",
+  "period": "3mo",
+  "interval": "5d",
+  "data": [
+    {
+      "Date": "2025-11-03 00:00:00",
+      "Open": 170.50,
+      "High": 172.00,
+      "Low": 169.80,
+      "Close": 171.50,
+      "Volume": 45000000,
+      "Dividends": 0.0,
+      "Stock Splits": 0.0
+    },
+    ...
+  ]
+}
+
+
+✅ GET STOCK INFO (DETAILED INFORMATION)
+URL: GET /api/stock/info/<symbol>
+Description: Get detailed company information and metrics
+Parameters:
+  - symbol (required): Stock ticker symbol
+
+Example Request:
+  GET /api/stock/info/AAPL
+
+Example Response:
+{
+  "symbol": "AAPL",
+  "name": "Apple Inc.",
+  "sector": "Technology",
+  "industry": "Consumer Electronics",
+  "description": "Apple Inc. designs, manufactures, and markets...",
+  "website": "https://www.apple.com",
+  "employees": 164000,
+  "marketCap": 3100000000000,
+  "peRatio": 28.5,
+  "dividendYield": 0.0046,
+  "52WeekHigh": 199.62,
+  "52WeekLow": 150.43
+}
+
+
+✅ SEARCH STOCKS (WITH REAL-TIME SUGGESTIONS)
+URL: GET /api/stock/search
+Description: Search for stocks by company name or symbol with caching
+Parameters:
+  - query (required): Company name or stock symbol (min 1 character)
+  - max_results (optional): Maximum results to return (default: 10)
+  - include_news (optional): Include recent news in results (default: false)
+
+Example Request:
+  GET /api/stock/search?query=apple&max_results=5
+  GET /api/stock/search?query=AAPL&include_news=true
+
+Example Response:
+{
+  "query": "apple",
+  "count": 3,
+  "results": [
+    {
+      "symbol": "AAPL",
+      "name": "Apple Inc.",
+      "exchange": "NASDAQ",
+      "type": "EQUITY",
+      "price": 195.45,
+      "change_percent": 1.29,
+      "recent_news": [
+        {
+          "headline": "Apple announces new iPhone 15",
+          "summary": "Latest iPhone features...",
+          "source": "Reuters",
+          "url": "https://...",
+          "datetime": "2026-02-03T09:00:00"
+        }
+      ]
+    },
+    ...
+  ],
+  "timestamp": "2026-02-03T10:30:45.123456"
+}
+
+📌 SEARCH FEATURES:
+  ✅ Primary search via yfinance
+  ✅ Fallback search with common stocks (AAPL, MSFT, GOOGL, AMZN, TSLA, etc.)
+  ✅ Result caching (5-minute TTL)
+  ✅ Optional news inclusion
+  ✅ Real-time price fetching
+  ✅ Exchange information
+
+
+✅ GET MULTIPLE STOCKS (BATCH REQUEST)
+URL: POST /api/stock/multiple
+Description: Get data for multiple stocks in a single request
+Content-Type: application/json
+Body Parameters:
+  - symbols (required): Array of stock symbols
+  - timeframe (optional): Timeframe for all symbols (default: 1M)
+
+Example Request:
+POST /api/stock/multiple
+Content-Type: application/json
+
+{
+  "symbols": ["AAPL", "MSFT", "GOOGL"],
+  "timeframe": "1M"
+}
+
+Example Response:
+{
+  "timeframe": "1M",
+  "period": "1mo",
+  "interval": "30m",
+  "results": [
+    {
+      "symbol": "AAPL",
+      "price": 195.45,
+      "change": 2.50,
+      "changePercent": 1.29
+    },
+    {
+      "symbol": "MSFT",
+      "price": 410.50,
+      "change": 5.20,
+      "changePercent": 1.28
+    },
+    {
+      "symbol": "GOOGL",
+      "price": 142.75,
+      "change": 3.10,
+      "changePercent": 2.22
+    }
+  ]
+}
+
+
+========================================
+3. CRYPTO ENDPOINTS
+========================================
+
+✅ GET CRYPTO QUOTE (REAL-TIME PRICE)
+URL: GET /api/crypto/quote/<symbol>
+Description: Get current cryptocurrency quote
+Parameters:
+  - symbol (required): Crypto ticker (e.g., BTC-USD, ETH-USD)
+
+Example Request:
+  GET /api/crypto/quote/BTC-USD
+  GET /api/crypto/quote/ETH-USD
+
+Example Response:
+{
+  "symbol": "BTC-USD",
+  "price": 45230.50,
+  "change": 1250.75,
+  "changePercent": 2.84,
+  "timestamp": "2026-02-03T10:30:45.123456",
+  "open": 43950.00,
+  "high": 45500.00,
+  "low": 43800.00,
+  "volume": 28500000000,
+  "marketCap": 850000000000
+}
+
+
+✅ GET CRYPTO HISTORY
+URL: GET /api/crypto/history/<symbol>
+Description: Get historical cryptocurrency data
+Parameters:
+  - symbol (required): Crypto ticker (BTC-USD, ETH-USD, etc.)
+  - timeframe (optional): 1D, 5D, 1M, 3M, 6M, 1Y, 5Y, MAX (default: 1M)
+  - period (optional): Custom period
+  - interval (optional): Custom interval
+
+Example Request:
+  GET /api/crypto/history/BTC-USD?timeframe=1D
+  GET /api/crypto/history/ETH-USD?period=1d&interval=1m
+
+Example Response:
+{
+  "symbol": "BTC-USD",
+  "timeframe": "1D",
+  "period": "1d",
+  "interval": "1m",
+  "data": [
+    {
+      "Date": "2026-02-03 10:00:00",
+      "Open": 45100.00,
+      "High": 45350.00,
+      "Low": 44950.00,
+      "Close": 45230.50,
+      "Volume": 28500000000,
+      "Dividends": 0.0,
+      "Stock Splits": 0.0
+    },
+    ...
+  ]
+}
+
+📌 CRYPTO SEARCH:
+  ❌ NO DEDICATED CRYPTO SEARCH ENDPOINT
+  ⚠️ Use /api/stock/search with crypto symbols (BTC-USD, ETH-USD, etc.)
+  ✅ Fallback includes: BTC-USD, ETH-USD, BNB-USD, XRP-USD, ADA-USD, DOGE-USD
+
+
+========================================
+4. NEWS & SENTIMENT ANALYSIS
+========================================
+
+✅ GET ASSET NEWS
+URL: GET /api/asset/news/<symbol>
+Description: Get latest company/asset news from Finnhub
+Parameters:
+  - symbol (required): Stock or crypto symbol
+  - limit (optional): Number of news items (default: 10, max: varies by API)
+
+Example Request:
+  GET /api/asset/news/AAPL?limit=5
+  GET /api/asset/news/BTC-USD
+
+Example Response:
+{
+  "symbol": "AAPL",
+  "news_count": 5,
+  "news": [
+    {
+      "headline": "Apple beats Q4 earnings expectations",
+      "summary": "Apple reported strong quarterly results...",
+      "source": "Reuters",
+      "url": "https://reuters.com/...",
+      "datetime": "2026-02-03T09:00:00"
+    },
+    ...
+  ],
+  "timestamp": "2026-02-03T10:30:45.123456"
+}
+
+📌 NEWS FEATURES:
+  ✅ Integration with Finnhub API
+  ✅ 30-day news lookback window
+  ✅ Headline, summary, source, and URL
+  ✅ Datetime for each article
+  ✅ Used for sentiment analysis in insights
+
+
+========================================
+5. RISK ANALYSIS & METRICS
+========================================
+
+✅ PREDICT ASSET RISK
+URL: GET /api/asset/risk/<symbol>
+Description: Analyze asset risk using volatility and statistical metrics
+Parameters:
+  - symbol (required): Stock or crypto symbol
+  - period (optional): Analysis period - 1D, 5D, 1M, 3M, 6M, 1Y, 5Y, MAX (default: 3M)
+
+Example Request:
+  GET /api/asset/risk/AAPL?period=1Y
+  GET /api/asset/risk/BTC-USD
+
+Example Response:
+{
+  "symbol": "AAPL",
+  "period": "1Y",
+  "risk_metrics": {
+    "volatility_annual": 0.2345,
+    "value_at_risk_95": -0.0342,
+    "maximum_drawdown": -0.3456,
+    "sharpe_ratio": 1.2345,
+    "risk_score": 23.45,
+    "risk_level": "Medium"
+  },
+  "timestamp": "2026-02-03T10:30:45.123456"
+}
+
+📌 RISK METRICS EXPLAINED:
+  • Volatility (Annual): Annualized standard deviation of returns
+  • Value at Risk (VaR 95%): Maximum expected loss at 95% confidence
+  • Maximum Drawdown: Largest peak-to-trough decline
+  • Sharpe Ratio: Risk-adjusted return metric (higher is better)
+  • Risk Score: 0-100 normalized volatility score
+  • Risk Level: Very Low (<15), Low (15-30), Medium (30-50), High (50-75), Very High (>75)
+
+
+========================================
+6. FORECASTING & PREDICTIONS
+========================================
+
+✅ FORECAST ASSET VALUE (10-DAY FORECAST)
+URL: GET /api/asset/forecast/<symbol>
+Description: Predict asset price for next 10 days using Random Forest ML
+Parameters:
+  - symbol (required): Stock or crypto symbol
+  - days (optional): Number of days to forecast (default: 10)
+
+Example Request:
+  GET /api/asset/forecast/AAPL
+  GET /api/asset/forecast/BTC-USD?days=15
+
+Example Response:
+{
+  "symbol": "AAPL",
+  "current_price": 195.45,
+  "forecast_period": "10 days",
+  "forecast": {
+    "dates": [
+      "2026-02-04",
+      "2026-02-05",
+      ...
+      "2026-02-13"
+    ],
+    "prices": [
+      196.50,
+      197.23,
+      ...
+      199.75
+    ],
+    "confidence": [
+      0.825,
+      0.812,
+      ...
+      0.734
+    ]
+  },
+  "summary": {
+    "predicted_price_day_10": 199.75,
+    "expected_change": 4.30,
+    "expected_change_percent": 2.20,
+    "trend": "Uptrend"
+  },
+  "timestamp": "2026-02-03T10:30:45.123456"
+}
+
+📌 FORECAST FEATURES:
+  ✅ Machine Learning: Random Forest Regressor
+  ✅ Training Data: 3 months of historical data
+  ✅ Features Used: Days, Open, High, Low, Volume, MA_5, MA_10, Volatility
+  ✅ Confidence Scores: Per-day prediction confidence (0.5-0.95 range)
+  ✅ Data Normalization: MinMaxScaler for feature scaling
+  ✅ 100 estimators ensemble for robust predictions
+
+
+========================================
+7. AI-POWERED INSIGHTS
+========================================
+
+✅ GET ASSET INSIGHTS
+URL: GET /api/asset/insights/<symbol>
+Description: Generate comprehensive AI-powered insights with technical analysis
+Parameters:
+  - symbol (required): Stock or crypto symbol
+
+Example Request:
+  GET /api/asset/insights/AAPL
+  GET /api/asset/insights/BTC-USD
+
+Example Response:
+{
+  "symbol": "AAPL",
+  "current_price": 195.45,
+  "price_change_30d": 8.25,
+  "technical_metrics": {
+    "volatility_annual": 0.2345,
+    "ma_20": 191.20,
+    "ma_50": 187.50,
+    "volume_ratio": 1.35
+  },
+  "sentiment": {
+    "positive_articles": 7,
+    "negative_articles": 2,
+    "overall": "Positive"
+  },
+  "insights": [
+    "📈 Strong uptrend: AAPL has gained 8.25% in the last 30 days",
+    "📊 Bullish structure: Price is above both 20-day and 50-day moving averages",
+    "📢 High activity: Current trading volume is 1.35x the average...",
+    "📰 Market sentiment: Recent news is predominantly positive (7 positive vs 2 negative)",
+    "⚡ Risk level: Medium risk - Balanced investors should consider..."
+  ],
+  "recommendation": "Do your own research and consult a financial advisor",
+  "timestamp": "2026-02-03T10:30:45.123456"
+}
+
+📌 INSIGHT COMPONENTS:
+  ✅ Price Trend Analysis (30-day change)
+  ✅ Technical Indicators (MA20, MA50, Volume Ratio)
+  ✅ Moving Average Positioning (Bullish/Bearish structure)
+  ✅ Volatility Assessment (Stability classification)
+  ✅ Volume Analysis (Trading activity)
+  ✅ News Sentiment (Positive/Negative/Neutral classification)
+  ✅ Risk Assessment (Based on volatility thresholds)
+  ✅ Human-readable recommendations
+
+
+========================================
+8. PORTFOLIO MANAGEMENT
+========================================
+
+✅ GET AVAILABLE TIMEFRAMES
+URL: GET /api/timeframes
+Description: Get all available timeframes and their configurations
+Parameters: None
+
+Example Request:
+  GET /api/timeframes
+
+Example Response:
+{
+  "timeframes": {
+    "1D": {"period": "1d", "interval": "1m"},
+    "5D": {"period": "5d", "interval": "5m"},
+    "1M": {"period": "1mo", "interval": "30m"},
+    "3M": {"period": "3mo", "interval": "5d"},
+    "6M": {"period": "6mo", "interval": "1d"},
+    "1Y": {"period": "1y", "interval": "1d"},
+    "5Y": {"period": "5y", "interval": "1wk"},
+    "MAX": {"period": "max", "interval": "1mo"}
+  }
+}
+
+
+✅ QUANTUM PORTFOLIO OPTIMIZATION
+URL: GET /api/portfolio/optimize
+Description: Optimize portfolio using Quantum QAOA algorithm (Qiskit)
+Parameters:
+  - budget (optional): Investment budget in USD (default: 10000)
+  - risk_factor (optional): Risk tolerance 0-1 (default: 0.9)
+  - target_assets (optional): Target number of assets to select
+  - max_assets (optional): Maximum assets filter
+
+Example Request:
+  GET /api/portfolio/optimize?budget=50000&risk_factor=0.5
+  GET /api/portfolio/optimize?budget=100000&risk_factor=0.3&max_assets=5
+
+Example Response:
+{
+  "status": "success",
+  "solver": "quantum (QAOA)",
+  "allocation_method": "quantum_binary_equal_weight",
+  "truncated": false,
+  "original_symbols": ["AAPL", "MSFT", "GOOGL", "AMZN"],
+  "valid_symbols": ["AAPL", "MSFT", "GOOGL", "AMZN"],
+  "budget": 50000,
+  "target_assets": 2,
+  "assets_selected": 2,
+  "max_assets": null,
+  "risk_factor": 0.5,
+  "optimal_allocation": {
+    "AAPL": {
+      "selected": true,
+      "weight": 0.5,
+      "allocation": 25000,
+      "percentage": 50.0
+    },
+    "MSFT": {
+      "selected": true,
+      "weight": 0.5,
+      "allocation": 25000,
+      "percentage": 50.0
+    },
+    "GOOGL": {
+      "selected": false,
+      "weight": 0,
+      "allocation": 0,
+      "percentage": 0
+    },
+    "AMZN": {
+      "selected": false,
+      "weight": 0,
+      "allocation": 0,
+      "percentage": 0
+    }
+  },
+  "portfolio_metrics": {
+    "expected_return": 0.0234,
+    "risk": 0.1234,
+    "sharpe_ratio": 0.1897
+  },
+  "objective_value": -2.345,
+  "quantum_solutions": [
+    {
+      "selection": [1, 1, 0, 0],
+      "bitstring": "0011",
+      "assets": ["AAPL", "MSFT"],
+      "objective_value": -2.345,
+      "probability": 0.2456,
+      "num_assets": 2,
+      "is_selected": true
+    },
+    ...
+  ]
+}
+
+📌 QUANTUM OPTIMIZATION FEATURES:
+  ✅ Quantum QAOA Algorithm (Qiskit)
+  ✅ 2-year weekly historical data
+  ✅ Covariance matrix calculation
+  ✅ Mean returns computation
+  ✅ NISQ-friendly (max 5 assets)
+  ✅ Binary asset selection
+  ✅ Equal weight allocation
+  ✅ Top 10 quantum solutions returned
+  ✅ Sharpe ratio optimization
+  ✅ Risk-adjusted allocation
+
+
+========================================
+9. WEBSOCKET - REAL-TIME STREAMING
+========================================
+
+✅ REAL-TIME DATA STREAM
+WebSocket URL: ws://localhost:5000/ws/stream
+Description: Stream real-time stock/crypto data for multiple symbols
+Protocol: WebSocket (JSON messages)
+
+Message Format - SUBSCRIBE:
+{
+  "action": "subscribe",
+  "symbols": ["AAPL", "BTC-USD", "MSFT"]
+}
+
+Server Response:
+{
+  "type": "subscribed",
+  "symbols": ["AAPL", "BTC-USD", "MSFT"]
+}
+
+Real-Time Data Stream (every 5 seconds):
+{
+  "type": "data",
+  "data": {
+    "AAPL": {
+      "symbol": "AAPL",
+      "price": 195.45,
+      "open": 193.00,
+      "high": 196.50,
+      "low": 192.75,
+      "volume": 52500000,
+      "timestamp": "2026-02-03T10:30:45.123456"
+    },
+    "BTC-USD": {
+      "symbol": "BTC-USD",
+      "price": 45230.50,
+      "open": 45100.00,
+      "high": 45350.00,
+      "low": 44950.00,
+      "volume": 28500000000,
+      "timestamp": "2026-02-03T10:30:45.123456"
+    },
+    ...
+  },
+  "timestamp": "2026-02-03T10:30:45.123456"
+}
+
+Message Format - UNSUBSCRIBE:
+{
+  "action": "unsubscribe"
+}
+
+Server Response:
+{
+  "type": "unsubscribed"
+}
+
+📌 WEBSOCKET FEATURES:
+  ✅ Multi-symbol subscription
+  ✅ 5-second streaming interval
+  ✅ Real-time OHLCV data
+  ✅ Background threading
+  ✅ Automatic connection cleanup
+  ✅ Error handling
+  ✅ Subscribe/unsubscribe actions
+
+
+================================================================================
+                        SEARCH FUNCTIONALITY SUMMARY
+================================================================================
+
+📍 STOCK SEARCH:
+  ✅ Endpoint: GET /api/stock/search?query=<query>
+  ✅ ALSO: GET /api/search?query=<query>
+  ✅ Universal Search: Works with stocks, crypto, commodities, indices, ETFs, bonds, etc.
+  ✅ Primary Search: via yfinance
+  ✅ Fallback Search: 40+ common symbols across all asset types
+  ✅ Caching: 5-minute TTL
+  ✅ News Integration: Optional (include_news=true)
+  ✅ Full Info: Optional (include_full_info=true)
+  ✅ Real-time Prices: Yes
+  ✅ Multi-asset Support: Stocks, Crypto, Commodities, Indices, ETFs, Bonds
+
+📍 CRYPTO SEARCH:
+  ✅ YES: Fully integrated into /api/search and /api/stock/search
+  ✅ Supports: BTC-USD, ETH-USD, ADA-USD, XRP-USD, SOL-USD, DOGE-USD, etc.
+  ✅ All price data and metrics available
+  ✅ No separate endpoint needed
+
+📍 COMMODITY SEARCH (NEW):
+  ✅ YES: Gold (GC=F), Silver (SI=F), Crude Oil (CL=F), Natural Gas (NG=F)
+  ✅ Fully integrated into universal search
+  ✅ All OHLCV data and metrics available
+
+📍 INDICES SEARCH (NEW):
+  ✅ YES: S&P 500 (^GSPC), Dow Jones (^DJI), Nasdaq (^IXIC)
+  ✅ Real-time index values and performance
+  ✅ All metrics available
+
+📍 ETF SEARCH (NEW):
+  ✅ YES: SPY, QQQ, IWM, and any other ETF symbol
+  ✅ Full fund information and performance metrics
+  ✅ Holdings, expense ratio, etc.
+
+========================================
+UNIVERSAL SEARCH - COMPREHENSIVE ENDPOINT (NEW)
+========================================
+
+✅ UNIVERSAL ASSET SEARCH & DETAILS
+URL: GET /api/search
+  OR: GET /api/stock/search
+  OR: GET /api/asset/<symbol>
+Description: Search or get details for ANY yfinance-supported asset
+Parameters:
+  - query (required for /search): Asset name or symbol
+  - max_results (optional): Max results (default: 10)
+  - include_news (optional): Include news (default: false)
+  - include_full_info (optional): Include all available info (default: false)
+
+Supported Asset Types:
+  ✅ US Stocks (AAPL, MSFT, GOOGL, AMZN, TSLA, NVDA, META, etc.)
+  ✅ Cryptocurrencies (BTC-USD, ETH-USD, ADA-USD, XRP-USD, SOL-USD, DOGE-USD)
+  ✅ Commodities (Gold, Silver, Crude Oil, Natural Gas)
+  ✅ Indices (S&P 500, Dow Jones, Nasdaq)
+  ✅ ETFs (SPY, QQQ, IWM, etc.)
+  ✅ Bonds & Treasuries (US Treasury Yields)
+  ✅ International Stocks (Indian: RELIANCE.NS, TCS.NS, INFY.NS, HDFC.NS, ICICIBANK.NS)
+  ✅ Mutual Funds (Any yfinance-supported fund symbol)
+  ✅ Foreign Exchange (Any currency pair available on yfinance)
+
+Example Request - SEARCH:
+  GET /api/search?query=bitcoin
+  GET /api/search?query=gold&include_full_info=true
+  GET /api/stock/search?query=apple&max_results=5
+  GET /api/stock/search?query=tesla&include_news=true
+
+Example Response - SEARCH:
+{
+  "query": "bitcoin",
+  "count": 1,
+  "results": [
+    {
+      "symbol": "BTC-USD",
+      "name": "Bitcoin",
+      "type": "Crypto",
+      "exchange": "N/A",
+      "current_price": 45230.50,
+      "open": 45100.00,
+      "high": 45350.00,
+      "low": 44950.00,
+      "volume": 28500000000,
+      "change_percent": 0.29,
+      "currency": "USD"
+    }
+  ],
+  "timestamp": "2026-02-03T10:30:45.123456"
+}
+
+
+✅ GET COMPREHENSIVE ASSET DETAILS
+URL: GET /api/asset/<symbol>
+Description: Fetch ALL available information for any asset
+Parameters:
+  - symbol: Any yfinance-supported symbol
+
+Example Request:
+  GET /api/asset/AAPL
+  GET /api/asset/BTC-USD
+  GET /api/asset/GC=F
+  GET /api/asset/^GSPC
+
+Example Response:
+{
+  "symbol": "AAPL",
+  "type": "EQUITY",
+  "name": "Apple Inc.",
+  "currency": "USD",
+  
+  "price": {
+    "current": 195.45,
+    "open": 193.00,
+    "high_today": 196.50,
+    "low_today": 192.75,
+    "52_week_high": 199.62,
+    "52_week_low": 150.43,
+    "previous_close": 194.50,
+    "bid": 195.40,
+    "ask": 195.45,
+    "bid_size": 1200,
+    "ask_size": 1500
+  },
+  
+  "volume": {
+    "current": 52500000,
+    "average_volume": 48000000,
+    "average_volume_10d": 49500000
+  },
+  
+  "performance": {
+    "change": 2.50,
+    "change_percent": 1.29,
+    "ytd_return": 0.0845,
+    "trailing_return": 0.2345
+  },
+  
+  "company": {
+    "sector": "Technology",
+    "industry": "Consumer Electronics",
+    "website": "https://www.apple.com",
+    "employees": 164000,
+    "country": "United States",
+    "city": "Cupertino",
+    "state": "California",
+    "zip_code": "95014",
+    "description": "Apple Inc. designs, manufactures, and..."
+  },
+  
+  "financials": {
+    "market_cap": 3100000000000,
+    "enterprise_value": 3050000000000,
+    "revenue": 383285000000,
+    "net_income": 96995000000,
+    "profit_margin": 0.2531,
+    "operating_margin": 0.3043,
+    "return_on_assets": 0.0743,
+    "return_on_equity": 0.8512
+  },
+  
+  "valuation": {
+    "pe_ratio": 28.5,
+    "forward_pe": 24.3,
+    "price_to_book": 45.67,
+    "price_to_sales": 12.45,
+    "ev_to_revenue": 7.95,
+    "ev_to_ebitda": 18.23,
+    "peg_ratio": 1.85
+  },
+  
+  "dividend": {
+    "dividend_rate": 0.93,
+    "dividend_yield": 0.0048,
+    "dividend_date": "2026-02-11",
+    "ex_dividend_date": "2026-02-04",
+    "payout_ratio": 0.15,
+    "last_dividend": 0.24
+  },
+  
+  "balance_sheet": {
+    "total_debt": 106162000000,
+    "total_cash": 23646000000,
+    "debt_to_equity": 1.45,
+    "current_ratio": 0.87,
+    "quick_ratio": 0.83,
+    "book_value": 4.28
+  },
+  
+  "risk": {
+    "volatility_annual": 0.2234,
+    "beta": 1.25,
+    "trailing_annual_dividend_rate": 0.93,
+    "trailing_annual_dividend_yield": 0.0048
+  },
+  
+  "growth": {
+    "revenue_growth": 0.0234,
+    "earnings_growth": 0.1456,
+    "earnings_estimate_current_year": 6.05,
+    "earnings_estimate_next_year": 6.85,
+    "earnings_estimate_next_quarter": 1.53
+  },
+  
+  "analyst": {
+    "target_price": 210.50,
+    "target_high": 235.00,
+    "target_low": 185.00,
+    "number_of_analysts": 45,
+    "recommendation_key": "buy"
+  },
+  
+  "ownership": {
+    "shares_outstanding": 15850000000,
+    "float_shares": 15820000000,
+    "shares_short": 45000000,
+    "shares_short_prior_month": 42000000,
+    "insider_holdings_percent": 0.0007,
+    "institutional_holdings_percent": 0.6142
+  },
+  
+  "timestamp": "2026-02-03T10:30:45.123456"
+}
+
+
+================================================================================
+                      RESPONSE STATUS CODES
+================================================================================
+
+200 OK
+  - Request successful, data returned
+
+201 Created
+  - Resource successfully created
+
+400 Bad Request
+  - Invalid parameters or missing required fields
+  
+404 Not Found
+  - Symbol/asset not found or no data available
+  
+500 Internal Server Error
+  - Server error occurred
+  
+503 Service Unavailable
+  - Portfolio API not available
+
+
+================================================================================
+                        ERROR RESPONSE FORMAT
+================================================================================
+
+{
+  "error": "Error message description",
+  "symbol": "AAPL",
+  "details": "Additional error details if available"
+}
+
+
+================================================================================
+                      SUPPORTED TIMEFRAMES
+================================================================================
+
+1D  - 1 day      (1-minute intervals)
+5D  - 5 days     (5-minute intervals)
+1M  - 1 month    (30-minute intervals)
+3M  - 3 months   (5-day intervals)
+6M  - 6 months   (1-day intervals)
+1Y  - 1 year     (1-day intervals)
+5Y  - 5 years    (1-week intervals)
+MAX - All data   (1-month intervals)
+
+
+================================================================================
+                    DEPENDENCIES & LIBRARIES
+================================================================================
+
+Flask - Web framework
+Flask-CORS - Cross-origin requests
+Flask-Sock - WebSocket support
+yfinance - Stock/crypto data
+pandas - Data manipulation
+numpy - Numerical computing
+scikit-learn - Machine learning (Random Forest, LinearRegression, MinMaxScaler)
+finnhub - News and company data
+qiskit - Quantum computing
+qiskit-finance - Financial algorithms
+qiskit-optimization - Optimization algorithms
+requests - HTTP requests
+threading - Background tasks
+
+
+================================================================================
+                        PERFORMANCE NOTES
+================================================================================
+
+• Real-time quotes: < 1 second
+• Historical data (3 months): 2-5 seconds
+• News fetching: 1-2 seconds
+• Forecast generation: 3-5 seconds
+• Insight generation: 2-3 seconds
+• Portfolio optimization: 5-30 seconds (quantum computation)
+• WebSocket streaming: 5-second interval, low latency
+• Search caching: 5-minute TTL for frequently searched terms
+
+
+================================================================================
+                      QUICK REFERENCE - POPULAR SYMBOLS
+================================================================================
+
+US STOCKS:
+  AAPL - Apple
+  MSFT - Microsoft
+  GOOGL - Google/Alphabet
+  AMZN - Amazon
+  TSLA - Tesla
+  META - Meta
+  NVDA - Nvidia
+  BRK-B - Berkshire Hathaway B
+  JPM - JPMorgan Chase
+  JNJ - Johnson & Johnson
+
+CRYPTOCURRENCIES:
+  BTC-USD - Bitcoin
+  ETH-USD - Ethereum
+  BNB-USD - Binance Coin
+  XRP-USD - Ripple
+  ADA-USD - Cardano
+  DOGE-USD - Dogecoin
+  SOL-USD - Solana
+  AVAX-USD - Avalanche
+  LTC-USD - Litecoin
+  MATIC-USD - Polygon
+
+INDIAN STOCKS:
+  RELIANCE.NS - Reliance Industries
+  TCS.NS - Tata Consultancy Services
+  INFY.NS - Infosys
+
+
+================================================================================
+                    USAGE RECOMMENDATIONS
+================================================================================
+
+✅ DO:
+  • Use search with caching for better performance
+  • Check risk metrics before investing
+  • Use portfolio optimization for allocation
+  • Subscribe to WebSocket for real-time monitoring
+  • Use multi-symbol endpoint for batch operations
+  • Cache results locally when possible
+
+❌ DON'T:
+  • Make excessive API calls in tight loops
+  • Use old/outdated stock symbols
+  • Ignore risk warnings in insights
+  • Make investment decisions based solely on automated analysis
+  • Forget to handle errors in production
+
+⚠️ LIMITATIONS:
+  • No dedicated crypto search endpoint (create custom implementation)
+  • Quantum optimization limited to 5 assets (NISQ hardware constraints)
+  • News data limited to 30-day window
+  • Forecast accuracy decreases beyond 10 days
+  • Real-time data depends on market hours
+
+
+================================================================================
+                        NEXT STEPS & ENHANCEMENTS
+================================================================================
+
+🔲 TODO: Create dedicated /api/crypto/search endpoint
+🔲 TODO: Add portfolio backtesting
+🔲 TODO: Implement alerts/notifications system
+🔲 TODO: Add options trading analysis
+🔲 TODO: Implement user authentication
+🔲 TODO: Add database persistence for user portfolios
+🔲 TODO: Create trading strategy backtester
+🔲 TODO: Add sentiment score aggregation
+🔲 TODO: Implement ML-based recommendation engine
+🔲 TODO: Add API rate limiting
+
+
+================================================================================
+Last Updated: February 3, 2026
+Documentation Version: 1.0 - Complete
+================================================================================

@@ -1,0 +1,928 @@
+================================================================================
+                    POSTMAN COMMANDS - API TEST EXAMPLES
+================================================================================
+
+BASE URL: http://localhost:5000
+
+================================================================================
+                         STOCK SEARCH EXAMPLES
+================================================================================
+
+1️⃣ SEARCH FOR APPLE STOCK
+==========================
+Method: GET
+URL: http://localhost:5000/api/search?query=apple&max_results=5
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=apple&max_results=5"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/search?query=apple&max_results=5
+  • Click Send
+
+
+2️⃣ SEARCH FOR MICROSOFT WITH FULL INFO
+========================================
+Method: GET
+URL: http://localhost:5000/api/search?query=microsoft&include_full_info=true
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=microsoft&include_full_info=true"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/search?query=microsoft&include_full_info=true
+  • Click Send
+
+
+3️⃣ SEARCH FOR GOOGLE WITH NEWS
+===============================
+Method: GET
+URL: http://localhost:5000/api/search?query=google&include_news=true
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=google&include_news=true"
+
+
+4️⃣ SEARCH FOR TESLA
+====================
+Method: GET
+URL: http://localhost:5000/api/search?query=tesla
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=tesla"
+
+
+5️⃣ SEARCH FOR NVIDIA
+=====================
+Method: GET
+URL: http://localhost:5000/api/search?query=nvidia
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=nvidia"
+
+
+================================================================================
+                      CRYPTOCURRENCY SEARCH EXAMPLES
+================================================================================
+
+1️⃣ SEARCH FOR BITCOIN
+======================
+Method: GET
+URL: http://localhost:5000/api/search?query=bitcoin
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=bitcoin"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/search?query=bitcoin
+  • Click Send
+
+
+2️⃣ SEARCH FOR ETHEREUM
+=======================
+Method: GET
+URL: http://localhost:5000/api/search?query=ethereum&include_full_info=true
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=ethereum&include_full_info=true"
+
+
+3️⃣ SEARCH FOR CARDANO
+======================
+Method: GET
+URL: http://localhost:5000/api/search?query=cardano
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=cardano"
+
+
+4️⃣ SEARCH FOR SOLANA
+=====================
+Method: GET
+URL: http://localhost:5000/api/search?query=solana
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=solana"
+
+
+5️⃣ SEARCH FOR DOGECOIN
+=======================
+Method: GET
+URL: http://localhost:5000/api/search?query=dogecoin
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=dogecoin"
+
+
+================================================================================
+                      COMMODITY SEARCH EXAMPLES
+================================================================================
+
+1️⃣ SEARCH FOR GOLD
+===================
+Method: GET
+URL: http://localhost:5000/api/search?query=gold&include_full_info=true
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=gold&include_full_info=true"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/search?query=gold&include_full_info=true
+  • Click Send
+
+
+2️⃣ SEARCH FOR SILVER
+=====================
+Method: GET
+URL: http://localhost:5000/api/search?query=silver
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=silver"
+
+
+3️⃣ SEARCH FOR CRUDE OIL
+========================
+Method: GET
+URL: http://localhost:5000/api/search?query=crude+oil
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=crude+oil"
+
+
+4️⃣ SEARCH FOR NATURAL GAS
+==========================
+Method: GET
+URL: http://localhost:5000/api/search?query=natural+gas
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=natural+gas"
+
+
+================================================================================
+                      INDEX SEARCH EXAMPLES
+================================================================================
+
+1️⃣ SEARCH FOR S&P 500
+======================
+Method: GET
+URL: http://localhost:5000/api/search?query=sp500
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=sp500"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/search?query=sp500
+  • Click Send
+
+
+2️⃣ SEARCH FOR DOW JONES
+========================
+Method: GET
+URL: http://localhost:5000/api/search?query=dow&max_results=3
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=dow&max_results=3"
+
+
+3️⃣ SEARCH FOR NASDAQ
+=====================
+Method: GET
+URL: http://localhost:5000/api/search?query=nasdaq
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=nasdaq"
+
+
+================================================================================
+                      ETF SEARCH EXAMPLES
+================================================================================
+
+1️⃣ SEARCH FOR SPY (S&P 500 ETF)
+=================================
+Method: GET
+URL: http://localhost:5000/api/search?query=spy&include_full_info=true
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=spy&include_full_info=true"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/search?query=spy&include_full_info=true
+  • Click Send
+
+
+2️⃣ SEARCH FOR QQQ (Nasdaq ETF)
+================================
+Method: GET
+URL: http://localhost:5000/api/search?query=qqq
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=qqq"
+
+
+3️⃣ SEARCH FOR IWM (Russell 2000 ETF)
+=======================================
+Method: GET
+URL: http://localhost:5000/api/search?query=iwm
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=iwm"
+
+
+================================================================================
+                   COMPREHENSIVE ASSET DETAILS EXAMPLES
+================================================================================
+
+1️⃣ GET FULL DETAILS FOR APPLE STOCK
+====================================
+Method: GET
+URL: http://localhost:5000/api/asset/AAPL
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/AAPL"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/asset/AAPL
+  • Click Send
+  
+Expected: All 100+ metrics for AAPL including price, financials, valuation, risk, analyst ratings
+
+
+2️⃣ GET FULL DETAILS FOR BITCOIN
+================================
+Method: GET
+URL: http://localhost:5000/api/asset/BTC-USD
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/BTC-USD"
+
+
+3️⃣ GET FULL DETAILS FOR MICROSOFT
+==================================
+Method: GET
+URL: http://localhost:5000/api/asset/MSFT
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/MSFT"
+
+
+4️⃣ GET FULL DETAILS FOR ETHEREUM
+==================================
+Method: GET
+URL: http://localhost:5000/api/asset/ETH-USD
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/ETH-USD"
+
+
+5️⃣ GET FULL DETAILS FOR GOLD
+==============================
+Method: GET
+URL: http://localhost:5000/api/asset/GC=F
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/GC=F"
+
+
+6️⃣ GET FULL DETAILS FOR S&P 500
+=================================
+Method: GET
+URL: http://localhost:5000/api/asset/^GSPC
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/^GSPC"
+
+
+7️⃣ GET FULL DETAILS FOR SPY ETF
+=================================
+Method: GET
+URL: http://localhost:5000/api/asset/SPY
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/SPY"
+
+
+8️⃣ GET FULL DETAILS FOR TESLA
+===============================
+Method: GET
+URL: http://localhost:5000/api/asset/TSLA
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/TSLA"
+
+
+================================================================================
+                    INTERNATIONAL STOCKS EXAMPLES
+================================================================================
+
+1️⃣ SEARCH FOR RELIANCE (INDIA)
+===============================
+Method: GET
+URL: http://localhost:5000/api/search?query=reliance
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=reliance"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/search?query=reliance
+  • Click Send
+
+
+2️⃣ GET FULL DETAILS FOR RELIANCE
+=================================
+Method: GET
+URL: http://localhost:5000/api/asset/RELIANCE.NS
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/RELIANCE.NS"
+
+
+3️⃣ SEARCH FOR TCS (TATA CONSULTANCY SERVICES)
+===============================================
+Method: GET
+URL: http://localhost:5000/api/search?query=tcs
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=tcs"
+
+
+4️⃣ GET FULL DETAILS FOR TCS
+=============================
+Method: GET
+URL: http://localhost:5000/api/asset/TCS.NS
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/TCS.NS"
+
+
+5️⃣ SEARCH FOR INFOSYS
+======================
+Method: GET
+URL: http://localhost:5000/api/search?query=infosys
+
+CURL:
+curl -X GET "http://localhost:5000/api/search?query=infosys"
+
+
+6️⃣ GET FULL DETAILS FOR INFOSYS
+=================================
+Method: GET
+URL: http://localhost:5000/api/asset/INFY.NS
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/INFY.NS"
+
+
+================================================================================
+                  STOCK QUOTE EXAMPLES (REAL-TIME)
+================================================================================
+
+1️⃣ GET LIVE APPLE PRICE
+========================
+Method: GET
+URL: http://localhost:5000/api/stock/quote/AAPL
+
+CURL:
+curl -X GET "http://localhost:5000/api/stock/quote/AAPL"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/stock/quote/AAPL
+  • Click Send
+
+
+2️⃣ GET LIVE MICROSOFT PRICE
+============================
+Method: GET
+URL: http://localhost:5000/api/stock/quote/MSFT
+
+CURL:
+curl -X GET "http://localhost:5000/api/stock/quote/MSFT"
+
+
+3️⃣ GET LIVE TESLA PRICE
+=========================
+Method: GET
+URL: http://localhost:5000/api/stock/quote/TSLA
+
+CURL:
+curl -X GET "http://localhost:5000/api/stock/quote/TSLA"
+
+
+================================================================================
+                  CRYPTO QUOTE EXAMPLES (REAL-TIME)
+================================================================================
+
+1️⃣ GET LIVE BITCOIN PRICE
+===========================
+Method: GET
+URL: http://localhost:5000/api/crypto/quote/BTC-USD
+
+CURL:
+curl -X GET "http://localhost:5000/api/crypto/quote/BTC-USD"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/crypto/quote/BTC-USD
+  • Click Send
+
+
+2️⃣ GET LIVE ETHEREUM PRICE
+============================
+Method: GET
+URL: http://localhost:5000/api/crypto/quote/ETH-USD
+
+CURL:
+curl -X GET "http://localhost:5000/api/crypto/quote/ETH-USD"
+
+
+3️⃣ GET LIVE CARDANO PRICE
+============================
+Method: GET
+URL: http://localhost:5000/api/crypto/quote/ADA-USD
+
+CURL:
+curl -X GET "http://localhost:5000/api/crypto/quote/ADA-USD"
+
+
+================================================================================
+                  MULTIPLE STOCKS BATCH REQUEST
+================================================================================
+
+1️⃣ GET PRICES FOR APPLE, MICROSOFT, GOOGLE
+=============================================
+Method: POST
+URL: http://localhost:5000/api/stock/multiple
+Content-Type: application/json
+
+Body (JSON):
+{
+  "symbols": ["AAPL", "MSFT", "GOOGL"],
+  "timeframe": "1M"
+}
+
+CURL:
+curl -X POST "http://localhost:5000/api/stock/multiple" \
+  -H "Content-Type: application/json" \
+  -d '{"symbols":["AAPL","MSFT","GOOGL"],"timeframe":"1M"}'
+
+POSTMAN Steps:
+  • Method: POST
+  • URL: http://localhost:5000/api/stock/multiple
+  • Headers Tab:
+    - Key: Content-Type
+    - Value: application/json
+  • Body Tab → select "raw" and "JSON"
+  • Paste the JSON body above
+  • Click Send
+
+
+2️⃣ GET PRICES FOR TECH STOCKS
+===============================
+Method: POST
+URL: http://localhost:5000/api/stock/multiple
+
+Body (JSON):
+{
+  "symbols": ["AAPL", "MSFT", "GOOGL", "NVDA", "META"],
+  "timeframe": "3M"
+}
+
+CURL:
+curl -X POST "http://localhost:5000/api/stock/multiple" \
+  -H "Content-Type: application/json" \
+  -d '{"symbols":["AAPL","MSFT","GOOGL","NVDA","META"],"timeframe":"3M"}'
+
+
+3️⃣ GET PRICES FOR STOCKS & CRYPTO MIX
+=======================================
+Method: POST
+URL: http://localhost:5000/api/stock/multiple
+
+Body (JSON):
+{
+  "symbols": ["AAPL", "MSFT", "BTC-USD", "ETH-USD"],
+  "timeframe": "1D"
+}
+
+CURL:
+curl -X POST "http://localhost:5000/api/stock/multiple" \
+  -H "Content-Type: application/json" \
+  -d '{"symbols":["AAPL","MSFT","BTC-USD","ETH-USD"],"timeframe":"1D"}'
+
+
+================================================================================
+                    STOCK HISTORY EXAMPLES
+================================================================================
+
+1️⃣ GET 1-MONTH HISTORY FOR APPLE
+==================================
+Method: GET
+URL: http://localhost:5000/api/stock/history/AAPL?timeframe=1M
+
+CURL:
+curl -X GET "http://localhost:5000/api/stock/history/AAPL?timeframe=1M"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/stock/history/AAPL?timeframe=1M
+  • Click Send
+
+
+2️⃣ GET 3-MONTH HISTORY FOR TESLA
+==================================
+Method: GET
+URL: http://localhost:5000/api/stock/history/TSLA?timeframe=3M
+
+CURL:
+curl -X GET "http://localhost:5000/api/stock/history/TSLA?timeframe=3M"
+
+
+3️⃣ GET 1-YEAR HISTORY FOR MICROSOFT
+======================================
+Method: GET
+URL: http://localhost:5000/api/stock/history/MSFT?timeframe=1Y
+
+CURL:
+curl -X GET "http://localhost:5000/api/stock/history/MSFT?timeframe=1Y"
+
+
+4️⃣ GET 5-YEAR HISTORY FOR GOOGLE
+===================================
+Method: GET
+URL: http://localhost:5000/api/stock/history/GOOGL?timeframe=5Y
+
+CURL:
+curl -X GET "http://localhost:5000/api/stock/history/GOOGL?timeframe=5Y"
+
+
+================================================================================
+                   CRYPTO HISTORY EXAMPLES
+================================================================================
+
+1️⃣ GET 1-DAY HISTORY FOR BITCOIN
+=================================
+Method: GET
+URL: http://localhost:5000/api/crypto/history/BTC-USD?timeframe=1D
+
+CURL:
+curl -X GET "http://localhost:5000/api/crypto/history/BTC-USD?timeframe=1D"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/crypto/history/BTC-USD?timeframe=1D
+  • Click Send
+
+
+2️⃣ GET 1-MONTH HISTORY FOR ETHEREUM
+====================================
+Method: GET
+URL: http://localhost:5000/api/crypto/history/ETH-USD?timeframe=1M
+
+CURL:
+curl -X GET "http://localhost:5000/api/crypto/history/ETH-USD?timeframe=1M"
+
+
+3️⃣ GET 3-MONTH HISTORY FOR CARDANO
+====================================
+Method: GET
+URL: http://localhost:5000/api/crypto/history/ADA-USD?timeframe=3M
+
+CURL:
+curl -X GET "http://localhost:5000/api/crypto/history/ADA-USD?timeframe=3M"
+
+
+================================================================================
+                    RISK ANALYSIS EXAMPLES
+================================================================================
+
+1️⃣ GET RISK METRICS FOR APPLE
+==============================
+Method: GET
+URL: http://localhost:5000/api/asset/risk/AAPL?period=1Y
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/risk/AAPL?period=1Y"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/asset/risk/AAPL?period=1Y
+  • Click Send
+
+
+2️⃣ GET RISK METRICS FOR BITCOIN
+=================================
+Method: GET
+URL: http://localhost:5000/api/asset/risk/BTC-USD?period=3M
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/risk/BTC-USD?period=3M"
+
+
+3️⃣ GET RISK METRICS FOR TESLA
+===============================
+Method: GET
+URL: http://localhost:5000/api/asset/risk/TSLA?period=6M
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/risk/TSLA?period=6M"
+
+
+================================================================================
+                    FORECAST EXAMPLES
+================================================================================
+
+1️⃣ GET 10-DAY FORECAST FOR APPLE
+=================================
+Method: GET
+URL: http://localhost:5000/api/asset/forecast/AAPL
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/forecast/AAPL"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/asset/forecast/AAPL
+  • Click Send
+
+
+2️⃣ GET 10-DAY FORECAST FOR BITCOIN
+===================================
+Method: GET
+URL: http://localhost:5000/api/asset/forecast/BTC-USD
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/forecast/BTC-USD"
+
+
+3️⃣ GET 10-DAY FORECAST FOR MICROSOFT
+======================================
+Method: GET
+URL: http://localhost:5000/api/asset/forecast/MSFT
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/forecast/MSFT"
+
+
+================================================================================
+                    INSIGHTS EXAMPLES
+================================================================================
+
+1️⃣ GET AI INSIGHTS FOR APPLE
+==============================
+Method: GET
+URL: http://localhost:5000/api/asset/insights/AAPL
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/insights/AAPL"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/asset/insights/AAPL
+  • Click Send
+
+
+2️⃣ GET AI INSIGHTS FOR BITCOIN
+================================
+Method: GET
+URL: http://localhost:5000/api/asset/insights/BTC-USD
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/insights/BTC-USD"
+
+
+3️⃣ GET AI INSIGHTS FOR TESLA
+==============================
+Method: GET
+URL: http://localhost:5000/api/asset/insights/TSLA
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/insights/TSLA"
+
+
+================================================================================
+                     NEWS EXAMPLES
+================================================================================
+
+1️⃣ GET LATEST NEWS FOR APPLE
+==============================
+Method: GET
+URL: http://localhost:5000/api/asset/news/AAPL?limit=5
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/news/AAPL?limit=5"
+
+POSTMAN Steps:
+  • Method: GET
+  • URL: http://localhost:5000/api/asset/news/AAPL?limit=5
+  • Click Send
+
+
+2️⃣ GET LATEST NEWS FOR BITCOIN
+================================
+Method: GET
+URL: http://localhost:5000/api/asset/news/BTC-USD?limit=10
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/news/BTC-USD?limit=10"
+
+
+3️⃣ GET LATEST NEWS FOR TESLA
+==============================
+Method: GET
+URL: http://localhost:5000/api/asset/news/TSLA?limit=3
+
+CURL:
+curl -X GET "http://localhost:5000/api/asset/news/TSLA?limit=3"
+
+
+================================================================================
+                   QUICK TEST SEQUENCE (COPY-PASTE)
+================================================================================
+
+Run these in order to test the entire API:
+
+1. Health Check:
+   GET http://localhost:5000/health
+
+2. Search Stocks:
+   GET http://localhost:5000/api/search?query=apple
+
+3. Search Crypto:
+   GET http://localhost:5000/api/search?query=bitcoin
+
+4. Search Commodities:
+   GET http://localhost:5000/api/search?query=gold
+
+5. Get Stock Details:
+   GET http://localhost:5000/api/asset/AAPL
+
+6. Get Crypto Details:
+   GET http://localhost:5000/api/asset/BTC-USD
+
+7. Get Live Prices (Multiple):
+   POST http://localhost:5000/api/stock/multiple
+   Body: {"symbols":["AAPL","MSFT","BTC-USD"],"timeframe":"1M"}
+
+8. Get Risk Analysis:
+   GET http://localhost:5000/api/asset/risk/AAPL
+
+9. Get Forecast:
+   GET http://localhost:5000/api/asset/forecast/TSLA
+
+10. Get Insights:
+    GET http://localhost:5000/api/asset/insights/AAPL
+
+
+================================================================================
+                         POSTMAN COLLECTION JSON
+================================================================================
+
+Import this into Postman to get all requests pre-configured:
+
+{
+  "info": {
+    "name": "BigBull Python API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Stock Searches",
+      "item": [
+        {
+          "name": "Search Apple",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/search?query=apple",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "search"],
+              "query": [{"key": "query", "value": "apple"}]
+            }
+          }
+        },
+        {
+          "name": "Search Microsoft",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/search?query=microsoft",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "search"],
+              "query": [{"key": "query", "value": "microsoft"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Crypto Searches",
+      "item": [
+        {
+          "name": "Search Bitcoin",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/search?query=bitcoin",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "search"],
+              "query": [{"key": "query", "value": "bitcoin"}]
+            }
+          }
+        },
+        {
+          "name": "Search Ethereum",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/search?query=ethereum",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "search"],
+              "query": [{"key": "query", "value": "ethereum"}]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Asset Details",
+      "item": [
+        {
+          "name": "Get AAPL Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/asset/AAPL",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "asset", "AAPL"]
+            }
+          }
+        },
+        {
+          "name": "Get BTC Details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:5000/api/asset/BTC-USD",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "5000",
+              "path": ["api", "asset", "BTC-USD"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+================================================================================
+                            TIPS & TRICKS
+================================================================================
+
+✅ FASTEST WAY IN POSTMAN:
+  1. Click "+" for new tab
+  2. Paste URL from this document
+  3. Click Send
+
+✅ TO TEST ALL QUICKLY:
+  1. Copy the URL
+  2. Paste in browser address bar
+  3. Press Enter
+
+✅ FOR JSON RESPONSES:
+  1. Make sure you have JSON formatting in Postman
+  2. Go to "Visualize" tab to see prettier response
+
+✅ TO SAVE REQUESTS:
+  1. Create a Collection named "BigBull API"
+  2. Save each request to it
+  3. Use for later testing
+
+✅ FOR BATCH REQUESTS:
+  1. Use POST /api/stock/multiple
+  2. Add multiple symbols in array
+  3. Get all at once!
+
+
+================================================================================
+Last Updated: February 3, 2026
+================================================================================
