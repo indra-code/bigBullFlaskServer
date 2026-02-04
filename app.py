@@ -16,6 +16,8 @@ from qiskit.primitives import StatevectorSampler
 from qiskit_optimization.algorithms import MinimumEigenOptimizer
 from qiskit.circuit.library import RealAmplitudes
 from qiskit.result import QuasiDistribution
+import google.generativeai as genai
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -668,6 +670,625 @@ def stream_stock_data(ws, symbols):
             }))
         except:
             pass
+@app.route('/getAssets', methods=['GET'])
+def get_assets():
+    assetData = requests.get('http://localhost:8080/api/assets')
+    return assetData.json()
+
+
+@app.route('/api/stock/risk/<symbol>', methods=['GET'])
+def get_stock_risk(symbol):
+    """
+    Get risk metrics for a stock using basic financial metrics
+    
+    ALGORITHM EXPLANATION:
+    =====================
+    Uses yfinance stock info data to calculate risk score based on:
+    - Beta: Measures volatility relative to market (S&P 500)
+    - 52-week change: Annual performance volatility
+    
+    Risk Score Formula (0-100):
+    - Beta component (max 50 points): |beta - 1| × 50
+    - Volatility component (max 50 points): |52-week change| × 100
+    
+    Risk Ratings:
+    - 0-20:   Low Risk (stable, defensive stocks)
+    - 20-50:  Moderate Risk (typical market stocks)
+    - 50-75:  High Risk (volatile growth stocks)
+    - 75-100: Very High Risk (extremely volatile)
+    
+    Query params: None required
+    Returns risk score and detailed metrics
+    """
+    try:
+        ticker = yf.Ticker(symbol.upper())
+        info = ticker.info
+        
+        print(f"\n📊 Risk Analysis for {symbol.upper()}")
+        
+        # Get beta and volatility from info
+        beta = info.get('beta', 1.0)
+        beta = float(beta) if beta else 1.0
+        
+        # Get 52-week change as volatility proxy
+        fifty_two_week_change = info.get('52WeekChange', 0)
+        fifty_two_week_change = abs(float(fifty_two_week_change)) if fifty_two_week_change else 0
+        
+        print(f"Beta: {beta}")
+        print(f"52-week change: {fifty_two_week_change}")
+        
+        # Risk score calculation
+        # Beta component: Distance from market neutral (1.0)
+        # A beta of 0.5 or 1.5 both indicate deviation from market
+        beta_score = min(abs(beta - 1) * 50, 50)  # Max 50 points from beta
+        
+        # Volatility component: 52-week price change magnitude
+        volatility_score = min(fifty_two_week_change * 100, 50)  # Max 50 points from 52w change
+        
+        # Composite score
+        risk_score = beta_score + volatility_score
+        
+        print(f"Beta score: {beta_score:.2f}, Volatility score: {volatility_score:.2f}")
+        print(f"Total risk score: {risk_score:.2f}")
+        
+        # Assign risk rating
+        if risk_score < 20:
+            risk_rating = "Low"
+        elif risk_score < 50:
+            risk_rating = "Moderate"
+        elif risk_score < 75:
+            risk_rating = "High"
+        else:
+            risk_rating = "Very High"
+        
+        return jsonify({
+            'symbol': symbol.upper(),
+            'risk_score': round(risk_score, 2),
+            'risk_rating': risk_rating,
+            'risk_type': 'Basic Financial',
+            'metrics': {
+                'beta': round(beta, 4),
+                'fifty_two_week_change': round(fifty_two_week_change, 4),
+                'beta_score': round(beta_score, 2),
+                'volatility_score': round(volatility_score, 2)
+            },
+            'interpretation': {
+                'beta': f"Beta of {round(beta, 2)} - {'More' if beta > 1 else 'Less'} volatile than market",
+                'volatility': f"52-week change of {round(fifty_two_week_change * 100, 2)}%",
+                'risk_assessment': f"{risk_rating} risk based on market correlation and price volatility"
+            },
+            'data_source': 'yfinance stock info',
+            'algorithm_version': '3.0-BasicFinancial'
+        }), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
+# ==================== CHATBOT ENDPOINT ====================
+
+# Tool definitions for the chatbot
+CHATBOT_TOOLS = [
+    {
+        "type": "function",
+        "function": {
+            "name": "get_user_assets",
+            "description": "Get the user's current portfolio assets and holdings. Use this when the user asks about their portfolio, holdings, or what stocks they own.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": []
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_stock_info",
+            "description": "Get detailed information about a stock including company info, market cap, PE ratio, dividend yield, etc. Use when user asks about company details or fundamentals.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_stock_quote",
+            "description": "Get current real-time price and quote data for a stock. Use when user asks about current price, today's price, or latest quote.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_stock_history",
+            "description": "Get historical price data for a stock over a specified time period. Use when user asks about historical performance, price trends, or past data.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)"
+                    },
+                    "timeframe": {
+                        "type": "string",
+                        "enum": ["1D", "5D", "1M", "3M", "6M", "1Y", "5Y", "MAX"],
+                        "description": "Time period for historical data (default: 1M)",
+                        "default": "1M"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_stocks",
+            "description": "Search for stocks by company name or ticker symbol. Use when user mentions a company name but you need the ticker, or when searching for stocks.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Search query (company name or partial ticker)"
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return (default: 5)",
+                        "default": 5
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_stock_recommendations",
+            "description": "Get analyst recommendations and ratings for a stock. Use when user asks about analyst opinions, recommendations, or ratings.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_stock_news",
+            "description": "Get latest news articles about a stock. Use when user asks about news, recent events, or updates about a company.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "optimize_portfolio",
+            "description": "Use quantum computing to optimize a portfolio of stocks. Use when user asks about portfolio optimization, asset allocation, or which stocks to invest in.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbols": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "List of stock ticker symbols to include in optimization"
+                    },
+                    "target_assets": {
+                        "type": "integer",
+                        "description": "Target number of assets to select (default: half of provided symbols)",
+                        "default": None
+                    }
+                },
+                "required": ["symbols"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_stock_risk",
+            "description": "Calculate risk score and metrics for a stock including volatility, beta, maximum drawdown, VaR, and Sharpe ratio. Use when user asks about risk, safety, or volatility of a stock.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "symbol": {
+                        "type": "string",
+                        "description": "Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)"
+                    },
+                    "period": {
+                        "type": "string",
+                        "description": "Historical period for analysis (default: 1y). Options: 6mo, 1y, 2y, 5y",
+                        "default": "1y"
+                    }
+                },
+                "required": ["symbol"]
+            }
+        }
+    }
+]
+
+
+def execute_tool(tool_name, arguments):
+    """Execute the requested tool and return results"""
+    print(f"\n🔧 Tool Called: {tool_name}")
+    print(f"   Arguments: {arguments}")
+    try:
+        if tool_name == "get_user_assets":
+            # Call the getAssets endpoint internally
+            response = requests.get('http://localhost:8080/api/assets')
+            if response.status_code == 200:
+                return {"success": True, "data": response.json()}
+            else:
+                return {"success": False, "error": "Failed to fetch user assets"}
+        
+        elif tool_name == "get_stock_info":
+            symbol = arguments.get("symbol", "").upper()
+            ticker = yf.Ticker(symbol)
+            info = ticker.info
+            return {"success": True, "symbol": symbol, "info": info}
+        
+        elif tool_name == "get_stock_quote":
+            symbol = arguments.get("symbol", "").upper()
+            ticker = yf.Ticker(symbol)
+            hist = ticker.history(period='1d', interval='1m')
+            if hist.empty:
+                return {"success": False, "error": f"No data found for {symbol}"}
+            latest = hist.iloc[-1]
+            quote = {
+                'symbol': symbol,
+                'price': float(latest['Close']),
+                'open': float(latest['Open']),
+                'high': float(latest['High']),
+                'low': float(latest['Low']),
+                'volume': int(latest['Volume']),
+                'timestamp': hist.index[-1].isoformat()
+            }
+            return {"success": True, "quote": quote}
+        
+        elif tool_name == "get_stock_history":
+            symbol = arguments.get("symbol", "").upper()
+            timeframe = arguments.get("timeframe", "1M").upper()
+            
+            if timeframe not in PERIOD_INTERVAL_MAP:
+                return {"success": False, "error": f"Invalid timeframe: {timeframe}"}
+            
+            period = PERIOD_INTERVAL_MAP[timeframe]['period']
+            interval = PERIOD_INTERVAL_MAP[timeframe]['interval']
+            
+            ticker = yf.Ticker(symbol)
+            history = ticker.history(period=period, interval=interval)
+            
+            if history.empty:
+                return {"success": False, "error": f"No data found for {symbol}"}
+            
+            # Convert to list of dicts (limit to last 30 data points for chatbot)
+            history_reset = history.reset_index().tail(30)
+            data_list = history_reset.to_dict(orient='records')
+            
+            # Convert timestamps
+            for record in data_list:
+                if 'Date' in record or 'Datetime' in record:
+                    date_key = 'Date' if 'Date' in record else 'Datetime'
+                    record[date_key] = record[date_key].isoformat() if hasattr(record[date_key], 'isoformat') else str(record[date_key])
+            
+            return {"success": True, "symbol": symbol, "timeframe": timeframe, "data": data_list}
+        
+        elif tool_name == "search_stocks":
+            query = arguments.get("query", "")
+            max_results = arguments.get("max_results", 5)
+            
+            search_result = yf.Search(query, max_results=max_results)
+            return {"success": True, "query": query, "results": search_result.response}
+        
+        elif tool_name == "get_stock_recommendations":
+            symbol = arguments.get("symbol", "").upper()
+            ticker = yf.Ticker(symbol)
+            
+            # Get recommendations
+            recommendations = ticker.recommendations
+            if recommendations is not None and not recommendations.empty:
+                # Convert to dict and get recent recommendations
+                rec_data = recommendations.tail(10).reset_index().to_dict(orient='records')
+                # Convert timestamps
+                for rec in rec_data:
+                    if 'Date' in rec:
+                        rec['Date'] = rec['Date'].isoformat() if hasattr(rec['Date'], 'isoformat') else str(rec['Date'])
+                return {"success": True, "symbol": symbol, "recommendations": rec_data}
+            else:
+                return {"success": False, "error": f"No recommendations found for {symbol}"}
+        
+        elif tool_name == "get_stock_news":
+            symbol = arguments.get("symbol", "").upper()
+            ticker = yf.Ticker(symbol)
+            
+            # Get news
+            news = ticker.news
+            if news:
+                return {"success": True, "symbol": symbol, "news": news[:10]}  # Limit to 10 news items
+            else:
+                return {"success": False, "error": f"No news found for {symbol}"}
+        
+        elif tool_name == "optimize_portfolio":
+            symbols = arguments.get("symbols", [])
+            target_assets = arguments.get("target_assets")
+            
+            if not symbols or len(symbols) < 2:
+                return {"success": False, "error": "At least 2 symbols required for optimization"}
+            
+            # Build query params
+            params = {"symbols": ",".join(symbols)}
+            if target_assets:
+                params["target_assets"] = target_assets
+            
+            # This is a simplified response - user can call the full endpoint for details
+            return {
+                "success": True,
+                "message": f"To optimize a portfolio with {', '.join(symbols)}, please use the /api/portfolio/optimize endpoint with these symbols.",
+                "endpoint": "/api/portfolio/optimize",
+                "params": params
+            }
+        
+        elif tool_name == "get_stock_risk":
+            # Call the risk endpoint internally (avoid code duplication)
+            symbol = arguments.get("symbol", "").upper()
+            period = arguments.get("period", "1y")
+            
+            try:
+                # Make internal request to the risk endpoint
+                response = requests.get(f'http://localhost:5000/api/stock/risk/{symbol}?period={period}')
+                if response.status_code == 200:
+                    risk_data = response.json()
+                    return {
+                        "success": True,
+                        "symbol": risk_data['symbol'],
+                        "risk_score": risk_data['risk_score'],
+                        "risk_rating": risk_data['risk_rating'],
+                        "volatility": risk_data['metrics']['volatility'],
+                        "beta": risk_data['metrics']['beta'],
+                        "max_drawdown_pct": round(risk_data['metrics']['max_drawdown'] * 100, 2),
+                        "sharpe_ratio": risk_data['metrics']['sharpe_ratio']
+                    }
+                else:
+                    return {"success": False, "error": f"Failed to get risk data for {symbol}"}
+            except Exception as e:
+                return {"success": False, "error": str(e)}
+        
+        else:
+            result = {"success": False, "error": f"Unknown tool: {tool_name}"}
+            print(f"   Result: {result}")
+            return result
+    
+    except Exception as e:
+        error_result = {"success": False, "error": str(e)}
+        print(f"   ❌ Error: {str(e)}")
+        return error_result
+
+
+@app.route('/api/chatbot', methods=['POST'])
+def chatbot():
+    """
+    Natural language chatbot for stock queries
+    Request body:
+    {
+        "message": "What is the current price of Apple stock?",
+        "conversation_history": []  # Optional: previous messages for context
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        if not data or 'message' not in data:
+            return jsonify({'error': 'message is required'}), 400
+        
+        user_message = data['message']
+        conversation_history = data.get('conversation_history', [])
+        
+        # Get Google API key from environment
+        api_key = os.getenv('GOOGLE_API_KEY')
+        if not api_key:
+            return jsonify({
+                'error': 'Google API key not configured. Please set GOOGLE_API_KEY environment variable.'
+            }), 500
+        
+        # Configure Gemini
+        genai.configure(api_key=api_key)
+        
+        # Create model with tools using proper Gemini function declarations
+        model = genai.GenerativeModel(
+            model_name='gemini-2.5-flash-lite',
+            tools=[
+                {
+                    'function_declarations': [
+                        {'name': 'get_user_assets', 'description': 'Get the user\'s current portfolio assets and holdings. Use this when the user asks about their portfolio, holdings, or what stocks they own.', 'parameters': {'type': 'OBJECT', 'properties': {}, 'required': []}},
+                        {'name': 'get_stock_info', 'description': 'Get detailed information about a stock including company info, market cap, PE ratio, dividend yield, etc. Use when user asks about company details or fundamentals.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}}, 'required': ['symbol']}},
+                        {'name': 'get_stock_quote', 'description': 'Get current real-time price and quote data for a stock. Use when user asks about current price, today\'s price, or latest quote.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}}, 'required': ['symbol']}},
+                        {'name': 'get_stock_history', 'description': 'Get historical price data for a stock over a specified time period. Use when user asks about historical performance, price trends, or past data.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}, 'timeframe': {'type': 'STRING', 'description': 'Time period for historical data (1D, 5D, 1M, 3M, 6M, 1Y, 5Y, MAX)', 'enum': ['1D', '5D', '1M', '3M', '6M', '1Y', '5Y', 'MAX']}}, 'required': ['symbol']}},
+                        {'name': 'search_stocks', 'description': 'Search for stocks by company name or ticker symbol. Use when user mentions a company name but you need the ticker, or when searching for stocks.', 'parameters': {'type': 'OBJECT', 'properties': {'query': {'type': 'STRING', 'description': 'Search query (company name or partial ticker)'}, 'max_results': {'type': 'INTEGER', 'description': 'Maximum number of results to return (default: 5)'}}, 'required': ['query']}},
+                        {'name': 'get_stock_recommendations', 'description': 'Get analyst recommendations and ratings for a stock. Use when user asks about analyst opinions, recommendations, or ratings.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}}, 'required': ['symbol']}},
+                        {'name': 'get_stock_news', 'description': 'Get latest news articles about a stock. Use when user asks about news, recent events, or updates about a company.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}}, 'required': ['symbol']}},
+                        {'name': 'get_stock_risk', 'description': 'Calculate risk score and metrics for a stock including volatility, beta, maximum drawdown, VaR, and Sharpe ratio. Use when user asks about risk, safety, or volatility of a stock.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}, 'period': {'type': 'STRING', 'description': 'Historical period for analysis (default: 1y)'}}, 'required': ['symbol']}},
+                        {'name': 'optimize_portfolio', 'description': 'Use quantum computing to optimize a portfolio of stocks. Use when user asks about portfolio optimization, asset allocation, or which stocks to invest in.', 'parameters': {'type': 'OBJECT', 'properties': {'symbols': {'type': 'ARRAY', 'items': {'type': 'STRING'}, 'description': 'List of stock ticker symbols to include in optimization'}, 'target_assets': {'type': 'INTEGER', 'description': 'Target number of assets to select (default: half of provided symbols)'}}, 'required': ['symbols']}}
+                    ]
+                }
+            ]
+        )
+        
+        # Build chat history for Gemini
+        chat_history = []
+        for msg in conversation_history:
+            if msg['role'] == 'user':
+                chat_history.append({'role': 'user', 'parts': [msg['content']]})
+            elif msg['role'] == 'assistant':
+                chat_history.append({'role': 'model', 'parts': [msg['content']]})
+        
+        # Start chat with history
+        chat = model.start_chat(history=chat_history)
+        
+        # System instruction context
+        system_context = """You are a helpful financial assistant for the BigBull trading platform. 
+You can help users with:
+- Information about stocks (prices, company details, historical data)
+- Their portfolio and holdings
+- Stock recommendations and analyst ratings
+- Latest news about companies
+- Portfolio optimization using quantum computing
+
+CRITICAL RULES - Follow these strictly:
+
+1. SINGLE STOCK ANALYSIS: When analyzing a stock, analyze ONLY ONE stock. Never provide analysis for multiple stocks in a single response.
+
+2. SEARCH BEHAVIOR: When using search_stocks tool:
+   - ALWAYS take the FIRST symbol from search results
+   - Use that symbol for ALL subsequent analysis (risk, news, recommendations)
+   - NEVER ask the user to choose between multiple options
+   - NEVER list multiple stock options
+   - Proceed directly with analysis of the first matching stock
+
+3. STOCK RECOMMENDATIONS: When providing stock recommendations:
+   - ALWAYS use get_stock_risk tool to check the risk score and metrics
+   - ALWAYS use get_stock_news tool to check recent news and events
+   - ALWAYS use get_stock_recommendations tool to see analyst ratings
+   - Synthesize insights into 2-3 short paragraphs with clear conclusion
+   - For Indian stocks: Try both .NS (NSE) and .BO (BSE) ticker suffixes if one fails
+
+4. RESPONSE FORMAT: Keep responses concise and focused:
+   - Paragraph 1: Risk assessment (score, beta, volatility) with interpretation
+   - Paragraph 2: Key news insights (recent earnings, partnerships, sector trends)
+   - Paragraph 3: Clear recommendation with reasoning (buy/hold/avoid and why)
+
+5. CLARITY: Your response should contain ONLY the analysis for the ONE stock being discussed. No multiple options, no alternatives, no suggestions to search for other stocks.
+
+Always be concise and helpful. When providing numerical data, format it clearly.
+When a stock symbol is mentioned, always use uppercase ticker symbols."""
+        
+        # Send message with context
+        full_message = f"{system_context}\n\nUser: {user_message}"
+        response = chat.send_message(full_message)
+        
+        # Check if model wants to use tools (max 10 iterations to prevent infinite loops)
+        max_iterations = 10
+        iteration = 0
+        
+        while iteration < max_iterations:
+            iteration += 1
+            
+            # Check if response has valid candidates and parts
+            if not response.candidates or not response.candidates[0].content.parts:
+                break
+            
+            part = response.candidates[0].content.parts[0]
+            
+            # Check for function call
+            if hasattr(part, 'function_call') and part.function_call:
+                function_call = part.function_call
+                function_name = function_call.name
+                function_args = dict(function_call.args)
+                
+                print(f"\n🤖 Gemini requested tool: {function_name}")
+                
+                # Execute the tool
+                function_response = execute_tool(function_name, function_args)
+                print(f"   ✅ Tool completed")
+                
+                # Send function response back to model
+                response = chat.send_message(
+                    genai.protos.Content(
+                        parts=[genai.protos.Part(
+                            function_response=genai.protos.FunctionResponse(
+                                name=function_name,
+                                response={'result': function_response}
+                            )
+                        )]
+                    )
+                )
+            else:
+                # No function call, we should have text
+                break
+        
+        # Extract final text response with proper error handling
+        final_message = None
+        try:
+            if hasattr(response, 'text') and response.text:
+                final_message = response.text
+        except (ValueError, AttributeError) as e:
+            print(f"   ⚠️ Error extracting text: {e}")
+        
+        # Fallback: try to extract from parts directly
+        if not final_message:
+            try:
+                if response.candidates and response.candidates[0].content.parts:
+                    for part in response.candidates[0].content.parts:
+                        if hasattr(part, 'text') and part.text:
+                            final_message = part.text
+                            break
+            except Exception as e:
+                print(f"   ⚠️ Error extracting from parts: {e}")
+        
+        # Final fallback
+        if not final_message:
+            final_message = "I apologize, but I encountered an error generating a response. Please try again."
+        
+        print(f"\n💬 Final Response: {final_message[:100]}..." if len(final_message) > 100 else f"\n💬 Final Response: {final_message}")
+        
+        # Build updated conversation history
+        updated_history = conversation_history + [
+            {"role": "user", "content": user_message},
+            {"role": "assistant", "content": final_message}
+        ]
+        
+        # Return response
+        return jsonify({
+            'response': final_message,
+            'conversation_history': updated_history
+        }), 200
+    
+    except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Chatbot error:\n{error_details}")
+        return jsonify({
+            'error': str(e),
+            'type': type(e).__name__,
+            'details': error_details
+        }), 500
 
 
 if __name__ == '__main__':
@@ -678,9 +1299,13 @@ if __name__ == '__main__':
     print("  - GET  /api/stock/history/<symbol>")
     print("  - GET  /api/stock/info/<symbol>")
     print("  - GET  /api/stock/quote/<symbol>")
+    print("  - GET  /api/stock/risk/<symbol>")
     print("  - GET  /api/search")
     print("  - POST /api/stock/multiple")
     print("  - GET  /api/timeframes")
+    print("  - GET  /api/portfolio/optimize")
+    print("  - POST /api/chatbot")
+    print("  - GET  /getAssets")
     print("  - WS   /ws/stream")
     print("\n")
     
