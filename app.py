@@ -809,6 +809,22 @@ def get_stock_news_endpoint(symbol):
 
 # ==================== CHATBOT ENDPOINT ====================
 
+def get_trending_stocks():
+    """
+    Get trending/popular stocks for analysis
+    Returns list of stock symbols
+    """
+    # Popular S&P 100 stocks across different sectors
+    popular_stocks = [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'META', 'TSLA',
+        'JPM', 'JNJ', 'V', 'PG', 'UNH', 'MA', 'HD',
+        'DIS', 'BAC', 'XOM', 'COST', 'ABBV', 'CVX',
+        'PFE', 'KO', 'MRK', 'PEP', 'AVGO', 'TMO',
+        'WMT', 'CSCO', 'ACN', 'MCD', 'ABT', 'LIN'
+    ]
+    return popular_stocks
+
+
 # Tool definitions for the chatbot
 CHATBOT_TOOLS = [
     {
@@ -980,6 +996,29 @@ CHATBOT_TOOLS = [
                 "required": ["symbol"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_recommendations_by_risk",
+            "description": "Get stock recommendations based on user's risk appetite. Analyzes trending stocks and filters by risk level. Use when user asks for stock recommendations, investment suggestions, or stocks to buy based on their risk tolerance (low/moderate/high risk).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "risk_appetite": {
+                        "type": "string",
+                        "enum": ["low", "moderate", "high"],
+                        "description": "User's risk tolerance: 'low' (conservative, stable stocks), 'moderate' (balanced risk-reward), 'high' (aggressive, volatile stocks)"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Number of recommendations to return (default: 5, max: 10)",
+                        "default": 5
+                    }
+                },
+                "required": ["risk_appetite"]
+            }
+        }
     }
 ]
 
@@ -1128,6 +1167,92 @@ def execute_tool(tool_name, arguments):
                     return {"success": False, "error": f"Failed to get risk data for {symbol}"}
             except Exception as e:
                 return {"success": False, "error": str(e)}
+        
+        elif tool_name == "get_recommendations_by_risk":
+            risk_appetite = arguments.get("risk_appetite", "moderate").lower()
+            count = min(arguments.get("count", 5), 10)  # Max 10 recommendations
+            
+            print(f"\n🔍 Getting {count} recommendations for {risk_appetite} risk appetite")
+            
+            # Define risk score ranges for each appetite
+            risk_ranges = {
+                "low": (0, 30),      # Risk score 0-30: Low risk stocks
+                "moderate": (20, 60), # Risk score 20-60: Moderate risk stocks
+                "high": (50, 100)     # Risk score 50-100: High risk stocks
+            }
+            
+            min_risk, max_risk = risk_ranges.get(risk_appetite, (20, 60))
+            
+            try:
+                # Get trending stocks
+                trending = get_trending_stocks()
+                print(f"   Analyzing {len(trending)} trending stocks...")
+                
+                # Analyze each stock's risk
+                recommendations = []
+                for symbol in trending:
+                    try:
+                        # Get risk data
+                        response = requests.get(f'http://localhost:5000/api/stock/risk/{symbol}', timeout=3)
+                        if response.status_code == 200:
+                            risk_data = response.json()
+                            risk_score = risk_data['risk_score']
+                            risk_rating = risk_data['risk_rating']
+                            
+                            # Skip stocks with 0 risk score (missing data)
+                            if risk_score == 0:
+                                print(f"   ⊘ {symbol}: Risk 0.0 - Skipped (no data)")
+                                continue
+                            
+                            # Check if risk matches user's appetite
+                            if min_risk <= risk_score <= max_risk:
+                                # Get current quote for additional info
+                                ticker = yf.Ticker(symbol)
+                                info = ticker.info
+                                hist = ticker.history(period='1d', interval='1m')
+                                
+                                if not hist.empty:
+                                    current_price = float(hist.iloc[-1]['Close'])
+                                    
+                                    recommendations.append({
+                                        'symbol': symbol,
+                                        'company_name': info.get('shortName', symbol),
+                                        'current_price': round(current_price, 2),
+                                        'risk_score': round(risk_score, 2),
+                                        'risk_rating': risk_rating,
+                                        'beta': risk_data['metrics'].get('beta', 'N/A'),
+                                        'market_cap': info.get('marketCap', 'N/A'),
+                                        'sector': info.get('sector', 'N/A'),
+                                        'recommendation': f"{'Conservative' if risk_appetite == 'low' else 'Balanced' if risk_appetite == 'moderate' else 'Aggressive'} investment"
+                                    })
+                                    
+                                    print(f"   ✓ {symbol}: Risk {risk_score:.1f} - Match!")
+                                    
+                                    # Stop if we have enough recommendations
+                                    if len(recommendations) >= count:
+                                        break
+                    except Exception as e:
+                        print(f"   ✗ {symbol}: Error - {str(e)}")
+                        continue
+                
+                if recommendations:
+                    return {
+                        "success": True,
+                        "risk_appetite": risk_appetite,
+                        "risk_range": {"min": min_risk, "max": max_risk},
+                        "count": len(recommendations),
+                        "recommendations": recommendations,
+                        "message": f"Found {len(recommendations)} {risk_appetite}-risk stocks from trending market data"
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": f"No trending stocks found matching {risk_appetite} risk appetite. Try a different risk level.",
+                        "analyzed_count": len(trending)
+                    }
+                    
+            except Exception as e:
+                return {"success": False, "error": f"Failed to analyze stocks: {str(e)}"}
         
         else:
             result = {"success": False, "error": f"Unknown tool: {tool_name}"}
