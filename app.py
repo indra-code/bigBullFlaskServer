@@ -769,6 +769,44 @@ def get_stock_risk(symbol):
         }), 500
 
 
+@app.route('/api/stock/news/<symbol>', methods=['GET'])
+def get_stock_news_endpoint(symbol):
+    """
+    Get latest news articles for a stock
+    Query params:
+    - limit: Maximum number of news items to return (default: 10)
+    """
+    try:
+        limit = int(request.args.get('limit', 10))
+        
+        ticker = yf.Ticker(symbol.upper())
+        news = ticker.news
+        
+        if news:
+            # Limit the number of news items
+            limited_news = news[:limit]
+            
+            return jsonify({
+                'symbol': symbol.upper(),
+                'news_count': len(limited_news),
+                'news': limited_news
+            }), 200
+        else:
+            return jsonify({
+                'symbol': symbol.upper(),
+                'news_count': 0,
+                'news': [],
+                'message': f'No news found for {symbol.upper()}'
+            }), 200
+        
+    except Exception as e:
+        import traceback
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+
 # ==================== CHATBOT ENDPOINT ====================
 
 # Tool definitions for the chatbot
@@ -1140,7 +1178,8 @@ RULES:
 2. When searching: Use FIRST result, proceed immediately (no user choice)
 3. For recommendations: Check risk, news, analyst ratings. Give 2-3 paragraph analysis
 4. For Indian stocks: Try .NS and .BO suffixes
-5. Be concise. Use uppercase tickers."""}
+5. Be concise. Use uppercase tickers.
+"""}
         ]
         
         # Add conversation history
@@ -1239,6 +1278,7 @@ if __name__ == '__main__':
     print("  - GET  /api/stock/info/<symbol>")
     print("  - GET  /api/stock/quote/<symbol>")
     print("  - GET  /api/stock/risk/<symbol>")
+    print("  - GET  /api/stock/news/<symbol>")
     print("  - GET  /api/search")
     print("  - POST /api/stock/multiple")
     print("  - GET  /api/timeframes")
