@@ -16,7 +16,7 @@ from qiskit.primitives import StatevectorSampler
 from qiskit_optimization.algorithms import MinimumEigenOptimizer
 from qiskit.circuit.library import RealAmplitudes
 from qiskit.result import QuasiDistribution
-import google.generativeai as genai
+from openai import OpenAI
 import os
 
 app = Flask(__name__)
@@ -1121,148 +1121,86 @@ def chatbot():
         user_message = data['message']
         conversation_history = data.get('conversation_history', [])
         
-        # Get Google API key from environment
-        api_key = os.getenv('GOOGLE_API_KEY')
+        # Get OpenAI API key from environment
+        api_key = os.getenv('OPENAI_API_KEY')
         if not api_key:
             return jsonify({
-                'error': 'Google API key not configured. Please set GOOGLE_API_KEY environment variable.'
+                'error': 'OpenAI API key not configured. Please set OPENAI_API_KEY environment variable.'
             }), 500
         
-        # Configure Gemini
-        genai.configure(api_key=api_key)
+        # Configure OpenAI client
+        client = OpenAI(api_key=api_key)
         
-        # Create model with tools using proper Gemini function declarations
-        model = genai.GenerativeModel(
-            model_name='gemini-2.5-flash-lite',
-            tools=[
-                {
-                    'function_declarations': [
-                        {'name': 'get_user_assets', 'description': 'Get the user\'s current portfolio assets and holdings. Use this when the user asks about their portfolio, holdings, or what stocks they own.', 'parameters': {'type': 'OBJECT', 'properties': {}, 'required': []}},
-                        {'name': 'get_stock_info', 'description': 'Get detailed information about a stock including company info, market cap, PE ratio, dividend yield, etc. Use when user asks about company details or fundamentals.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}}, 'required': ['symbol']}},
-                        {'name': 'get_stock_quote', 'description': 'Get current real-time price and quote data for a stock. Use when user asks about current price, today\'s price, or latest quote.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}}, 'required': ['symbol']}},
-                        {'name': 'get_stock_history', 'description': 'Get historical price data for a stock over a specified time period. Use when user asks about historical performance, price trends, or past data.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}, 'timeframe': {'type': 'STRING', 'description': 'Time period for historical data (1D, 5D, 1M, 3M, 6M, 1Y, 5Y, MAX)', 'enum': ['1D', '5D', '1M', '3M', '6M', '1Y', '5Y', 'MAX']}}, 'required': ['symbol']}},
-                        {'name': 'search_stocks', 'description': 'Search for stocks by company name or ticker symbol. Use when user mentions a company name but you need the ticker, or when searching for stocks.', 'parameters': {'type': 'OBJECT', 'properties': {'query': {'type': 'STRING', 'description': 'Search query (company name or partial ticker)'}, 'max_results': {'type': 'INTEGER', 'description': 'Maximum number of results to return (default: 5)'}}, 'required': ['query']}},
-                        {'name': 'get_stock_recommendations', 'description': 'Get analyst recommendations and ratings for a stock. Use when user asks about analyst opinions, recommendations, or ratings.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}}, 'required': ['symbol']}},
-                        {'name': 'get_stock_news', 'description': 'Get latest news articles about a stock. Use when user asks about news, recent events, or updates about a company.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}}, 'required': ['symbol']}},
-                        {'name': 'get_stock_risk', 'description': 'Calculate risk score and metrics for a stock including volatility, beta, maximum drawdown, VaR, and Sharpe ratio. Use when user asks about risk, safety, or volatility of a stock.', 'parameters': {'type': 'OBJECT', 'properties': {'symbol': {'type': 'STRING', 'description': 'Stock ticker symbol (e.g., AAPL, MSFT, GOOGL)'}, 'period': {'type': 'STRING', 'description': 'Historical period for analysis (default: 1y)'}}, 'required': ['symbol']}},
-                        {'name': 'optimize_portfolio', 'description': 'Use quantum computing to optimize a portfolio of stocks. Use when user asks about portfolio optimization, asset allocation, or which stocks to invest in.', 'parameters': {'type': 'OBJECT', 'properties': {'symbols': {'type': 'ARRAY', 'items': {'type': 'STRING'}, 'description': 'List of stock ticker symbols to include in optimization'}, 'target_assets': {'type': 'INTEGER', 'description': 'Target number of assets to select (default: half of provided symbols)'}}, 'required': ['symbols']}}
-                    ]
-                }
-            ]
-        )
+        # Build messages with system prompt
+        messages = [
+            {"role": "system", "content": """Financial assistant for BigBull. Use tools for stock data, portfolio, recommendations, news, risk analysis.
+
+RULES:
+1. Analyze ONE stock only per response
+2. When searching: Use FIRST result, proceed immediately (no user choice)
+3. For recommendations: Check risk, news, analyst ratings. Give 2-3 paragraph analysis
+4. For Indian stocks: Try .NS and .BO suffixes
+5. Be concise. Use uppercase tickers."""}
+        ]
         
-        # Build chat history for Gemini
-        chat_history = []
+        # Add conversation history
         for msg in conversation_history:
-            if msg['role'] == 'user':
-                chat_history.append({'role': 'user', 'parts': [msg['content']]})
-            elif msg['role'] == 'assistant':
-                chat_history.append({'role': 'model', 'parts': [msg['content']]})
+            messages.append({
+                "role": msg['role'],
+                "content": msg['content']
+            })
         
-        # Start chat with history
-        chat = model.start_chat(history=chat_history)
+        # Add current user message
+        messages.append({"role": "user", "content": user_message})
         
-        # System instruction context
-        system_context = """You are a helpful financial assistant for the BigBull trading platform. 
-You can help users with:
-- Information about stocks (prices, company details, historical data)
-- Their portfolio and holdings
-- Stock recommendations and analyst ratings
-- Latest news about companies
-- Portfolio optimization using quantum computing
-
-CRITICAL RULES - Follow these strictly:
-
-1. SINGLE STOCK ANALYSIS: When analyzing a stock, analyze ONLY ONE stock. Never provide analysis for multiple stocks in a single response.
-
-2. SEARCH BEHAVIOR: When using search_stocks tool:
-   - ALWAYS take the FIRST symbol from search results
-   - Use that symbol for ALL subsequent analysis (risk, news, recommendations)
-   - NEVER ask the user to choose between multiple options
-   - NEVER list multiple stock options
-   - Proceed directly with analysis of the first matching stock
-
-3. STOCK RECOMMENDATIONS: When providing stock recommendations:
-   - ALWAYS use get_stock_risk tool to check the risk score and metrics
-   - ALWAYS use get_stock_news tool to check recent news and events
-   - ALWAYS use get_stock_recommendations tool to see analyst ratings
-   - Synthesize insights into 2-3 short paragraphs with clear conclusion
-   - For Indian stocks: Try both .NS (NSE) and .BO (BSE) ticker suffixes if one fails
-
-4. RESPONSE FORMAT: Keep responses concise and focused:
-   - Paragraph 1: Risk assessment (score, beta, volatility) with interpretation
-   - Paragraph 2: Key news insights (recent earnings, partnerships, sector trends)
-   - Paragraph 3: Clear recommendation with reasoning (buy/hold/avoid and why)
-
-5. CLARITY: Your response should contain ONLY the analysis for the ONE stock being discussed. No multiple options, no alternatives, no suggestions to search for other stocks.
-
-Always be concise and helpful. When providing numerical data, format it clearly.
-When a stock symbol is mentioned, always use uppercase ticker symbols."""
-        
-        # Send message with context
-        full_message = f"{system_context}\n\nUser: {user_message}"
-        response = chat.send_message(full_message)
+        # Send message with tools
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
+            tools=CHATBOT_TOOLS,
+            tool_choice="auto"
+        )
         
         # Check if model wants to use tools (max 10 iterations to prevent infinite loops)
         max_iterations = 10
         iteration = 0
         
-        while iteration < max_iterations:
+        while iteration < max_iterations and response.choices[0].message.tool_calls:
             iteration += 1
+            tool_calls = response.choices[0].message.tool_calls
             
-            # Check if response has valid candidates and parts
-            if not response.candidates or not response.candidates[0].content.parts:
-                break
+            # Add assistant message with tool calls to messages
+            messages.append(response.choices[0].message)
             
-            part = response.candidates[0].content.parts[0]
-            
-            # Check for function call
-            if hasattr(part, 'function_call') and part.function_call:
-                function_call = part.function_call
-                function_name = function_call.name
-                function_args = dict(function_call.args)
+            # Execute each tool
+            for tool_call in tool_calls:
+                function_name = tool_call.function.name
+                function_args = json.loads(tool_call.function.arguments)
                 
-                print(f"\n🤖 Gemini requested tool: {function_name}")
+                print(f"\n🤖 OpenAI requested tool: {function_name}")
                 
                 # Execute the tool
                 function_response = execute_tool(function_name, function_args)
                 print(f"   ✅ Tool completed")
                 
-                # Send function response back to model
-                response = chat.send_message(
-                    genai.protos.Content(
-                        parts=[genai.protos.Part(
-                            function_response=genai.protos.FunctionResponse(
-                                name=function_name,
-                                response={'result': function_response}
-                            )
-                        )]
-                    )
-                )
-            else:
-                # No function call, we should have text
-                break
+                # Add tool response to messages
+                messages.append({
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": json.dumps(function_response)
+                })
+            
+            # Get next response
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=messages,
+                tools=CHATBOT_TOOLS,
+                tool_choice="auto"
+            )
         
-        # Extract final text response with proper error handling
-        final_message = None
-        try:
-            if hasattr(response, 'text') and response.text:
-                final_message = response.text
-        except (ValueError, AttributeError) as e:
-            print(f"   ⚠️ Error extracting text: {e}")
+        # Extract final text response
+        final_message = response.choices[0].message.content
         
-        # Fallback: try to extract from parts directly
-        if not final_message:
-            try:
-                if response.candidates and response.candidates[0].content.parts:
-                    for part in response.candidates[0].content.parts:
-                        if hasattr(part, 'text') and part.text:
-                            final_message = part.text
-                            break
-            except Exception as e:
-                print(f"   ⚠️ Error extracting from parts: {e}")
-        
-        # Final fallback
         if not final_message:
             final_message = "I apologize, but I encountered an error generating a response. Please try again."
         
@@ -1277,7 +1215,8 @@ When a stock symbol is mentioned, always use uppercase ticker symbols."""
         # Return response
         return jsonify({
             'response': final_message,
-            'conversation_history': updated_history
+            'conversation_history': updated_history,
+            'model': 'gpt-4o-mini'
         }), 200
     
     except Exception as e:
